@@ -1,0 +1,1186 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>관심종목 모멘텀 트래커</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#f2f3f7;
+    --surface:#ffffff;
+    --surface-2:#f7f8fb;
+    --border:#e2e4ec;
+    --border-strong:#c9cdda;
+    --text:#1a1c26;
+    --text-2:#565b6c;
+    --text-3:#8b91a3;
+    --accent:#33499e;
+    --accent-soft:#e9ecfa;
+    --pos:#0f7a52;
+    --pos-strong:#0a5c3d;
+    --pos-soft:#e2f3ea;
+    --neg:#b23a2e;
+    --neg-strong:#8f2c22;
+    --neg-soft:#fbe9e6;
+    --trail:#f26a0f;
+    --trail-ink:#b24705;
+    --trail-soft:#fff1e4;
+    --dot:#7a849b;
+    --sig:#8e3bd8;
+    --sig-ink:#6f22b0;
+    --sig-soft:#f1e6fb;
+    --dn:#c98400;
+    --dn-ink:#7d4d00;
+    --dn-soft:#fff2d1;
+    --grid:#e6e8f0;
+    --q-tr:#0a7a43; --q-tr-soft:#dcf3e6;
+    --q-br:#2b6fd6; --q-br-soft:#e2ecfb;
+    --q-tl:#c76608; --q-tl-soft:#fdebd6;
+    --q-bl:#b3261e; --q-bl-soft:#fbe2df;
+    --shadow: 0 1px 2px rgba(20,24,45,.04), 0 8px 24px -14px rgba(20,24,45,.18);
+    --font-display:'Fraunces', Georgia, 'Nanum Myeongjo', serif;
+    --font-sans:'IBM Plex Sans', 'Noto Sans KR', -apple-system, sans-serif;
+    --font-mono:'IBM Plex Mono', 'Noto Sans KR', ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0e1016;
+      --surface:#161923;
+      --surface-2:#1b1f2b;
+      --border:#2a2f3f;
+      --border-strong:#3a4155;
+      --text:#e9eaf2;
+      --text-2:#a6acc0;
+      --text-3:#767d92;
+      --accent:#8fa0ea;
+      --accent-soft:#1e2440;
+      --pos:#3fcf94;
+      --pos-strong:#6de0ac;
+      --pos-soft:#12281f;
+      --neg:#f0776a;
+      --neg-strong:#f5988e;
+      --neg-soft:#331c1a;
+      --trail:#ff8a2a;
+      --trail-ink:#ffb372;
+      --trail-soft:#33200f;
+      --dot:#98a1b8;
+      --sig:#c58bff;
+      --sig-ink:#dcb0ff;
+      --sig-soft:#2a1a3a;
+      --dn:#ffc13d;
+      --dn-ink:#ffd98a;
+      --dn-soft:#33260a;
+      --grid:#252a38;
+      --q-tr:#5fe0a6; --q-tr-soft:#11291f;
+      --q-br:#7fb0ff; --q-br-soft:#15233b;
+      --q-tl:#ffa24d; --q-tl-soft:#34200c;
+      --q-bl:#ff7b70; --q-bl-soft:#381a17;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 30px -16px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e1016;
+    --surface:#161923;
+    --surface-2:#1b1f2b;
+    --border:#2a2f3f;
+    --border-strong:#3a4155;
+    --text:#e9eaf2;
+    --text-2:#a6acc0;
+    --text-3:#767d92;
+    --accent:#8fa0ea;
+    --accent-soft:#1e2440;
+    --pos:#3fcf94;
+    --pos-strong:#6de0ac;
+    --pos-soft:#12281f;
+    --neg:#f0776a;
+    --neg-strong:#f5988e;
+    --neg-soft:#331c1a;
+    --trail:#ff8a2a;
+    --trail-ink:#ffb372;
+    --trail-soft:#33200f;
+    --dot:#98a1b8;
+    --sig:#c58bff;
+    --sig-ink:#dcb0ff;
+    --sig-soft:#2a1a3a;
+    --dn:#ffc13d;
+    --dn-ink:#ffd98a;
+    --dn-soft:#33260a;
+    --grid:#252a38;
+    --q-tr:#5fe0a6; --q-tr-soft:#11291f;
+    --q-br:#7fb0ff; --q-br-soft:#15233b;
+    --q-tl:#ffa24d; --q-tl-soft:#34200c;
+    --q-bl:#ff7b70; --q-bl-soft:#381a17;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 30px -16px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-sans);
+    padding-block:32px 56px;
+    padding-inline:20px;
+  }
+  .page{
+    max-width:1360px;
+    margin:0 auto;
+    display:flex;
+    flex-direction:column;
+    gap:28px;
+  }
+
+  /* ---------- header ---------- */
+  header.masthead{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:18px;
+    padding-bottom:20px;
+    border-bottom:2px solid var(--border-strong);
+  }
+  .masthead-left .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--accent);
+    font-weight:600;
+    margin:0 0 8px;
+  }
+  h1{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:clamp(28px,4vw,40px);
+    line-height:1.08;
+    margin:0 0 8px;
+    text-wrap:balance;
+    letter-spacing:-.01em;
+  }
+  .masthead-left p{
+    margin:0;
+    color:var(--text-2);
+    font-size:14.5px;
+    max-width:56ch;
+    line-height:1.55;
+  }
+  .masthead-right{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:10px;
+  }
+  .asof{
+    font-family:var(--font-mono);
+    font-size:12.5px;
+    color:var(--text-2);
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:7px;
+    padding:7px 12px;
+  }
+  .asof b{color:var(--text);font-weight:600;}
+  .legend-chip{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    align-items:center;
+    gap:6px 14px;
+    font-size:12.5px;
+    color:var(--text-2);
+    font-family:var(--font-mono);
+  }
+  .legend-chip .dot{display:inline-flex;align-items:center;gap:6px;}
+  .legend-chip .swatch{width:9px;height:9px;border-radius:2px;display:inline-block;}
+  .legend-chip .swatch.dia{border-radius:1px;transform:rotate(45deg) scale(.9);}
+
+  /* ---------- section headings ---------- */
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .section-head h2{
+    font-family:var(--font-display);
+    font-size:21px;
+    font-weight:600;
+    margin:0;
+    letter-spacing:-.01em;
+  }
+  .section-head .sub{
+    font-size:12.5px;
+    color:var(--text-3);
+    font-family:var(--font-mono);
+  }
+
+  /* ---------- table grid ---------- */
+  .grid-2{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:20px;
+  }
+  @media (max-width:860px){
+    .grid-2{grid-template-columns:1fr;}
+  }
+  .stack{display:flex;flex-direction:column;gap:20px;}
+
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+    padding:18px 18px 8px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    min-width:0;
+  }
+
+  .table-wrap{overflow-x:auto;}
+  table{
+    border-collapse:collapse;
+    width:100%;
+    min-width:480px;
+  }
+  thead th{
+    text-align:left;
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--text-3);
+    font-weight:500;
+    padding:0 5px 8px;
+    border-bottom:1px solid var(--border);
+    white-space:nowrap;
+  }
+  thead th.num{text-align:center;}
+  thead th.sortable{cursor:pointer;user-select:none;-webkit-user-select:none;}
+  thead th.sortable:hover{color:var(--text);}
+  thead th.sortable:focus-visible{outline:2px solid var(--trail);outline-offset:-2px;}
+  thead th .arr{display:inline-block;width:1em;color:var(--trail-ink);font-size:10px;}
+  thead th[aria-sort]{color:var(--text);}
+  .td-num{text-align:center;white-space:nowrap;}
+  .num-val{font-family:var(--font-mono);font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;}
+  .num-val.pos{color:var(--pos-strong);}
+  .num-val.neg{color:var(--neg-strong);}
+  tbody tr{border-bottom:1px solid var(--border);cursor:pointer;}
+  tbody tr:last-child{border-bottom:none;}
+  tbody tr:hover{background:var(--surface-2);}
+  tbody tr.sel{background:var(--trail-soft);}
+  tbody tr:focus-visible{outline:2px solid var(--trail);outline-offset:-2px;}
+  td{padding:9px 5px;vertical-align:middle;}
+
+  .td-ticker{width:64px;}
+  .ticker{
+    font-family:var(--font-mono);
+    font-weight:600;
+    font-size:12.5px;
+    color:var(--accent);
+    background:var(--accent-soft);
+    border-radius:5px;
+    padding:3px 6px;
+    letter-spacing:.01em;
+  }
+  tr.sel .ticker{background:var(--trail);color:#fff;}
+  .td-name{min-width:104px;}
+  .td-name .name{
+    display:block;
+    font-size:13.5px;
+    font-weight:500;
+    color:var(--text);
+    white-space:nowrap;
+  }
+  .td-name .sector{
+    display:block;
+    font-size:11px;
+    color:var(--text-3);
+    margin-top:1px;
+  }
+
+  .td-bar{width:26%;}
+  .bar-cell{display:flex;align-items:center;gap:5px;}
+  .bar-track{
+    position:relative;
+    flex:1 1 auto;
+    height:14px;
+    background:var(--surface-2);
+    border-radius:3px;
+    overflow:hidden;
+    min-width:24px;
+  }
+  tr.sel .bar-track{background:var(--surface);}
+  .bar-zero{
+    position:absolute;
+    left:50%;top:0;bottom:0;
+    width:1px;
+    background:var(--border-strong);
+  }
+  .bar{
+    position:absolute;
+    top:2px;bottom:2px;
+    border-radius:2px;
+  }
+  .bar.pos{background:var(--pos);}
+  .bar.neg{background:var(--neg);}
+  .bar-val{
+    font-family:var(--font-mono);
+    font-size:12px;
+    font-weight:600;
+    width:46px;
+    text-align:right;
+    flex:0 0 auto;
+    font-variant-numeric:tabular-nums;
+  }
+  .bar-val.pos{color:var(--pos-strong);}
+  .bar-val.neg{color:var(--neg-strong);}
+
+  .panel-foot{
+    font-size:11px;
+    color:var(--text-3);
+    padding:6px 8px 12px;
+    font-family:var(--font-mono);
+    line-height:1.55;
+  }
+
+  /* signal chips (table) */
+  .sig-chip{font-family:var(--font-sans);font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:99px;margin-left:6px;vertical-align:1px;white-space:nowrap;}
+  .sig-chip.up{background:var(--sig-soft);color:var(--sig-ink);}
+  .sig-chip.dn{background:var(--dn-soft);color:var(--dn-ink);}
+  .sig-chip.na{background:var(--surface-2);color:var(--text-3);border:1px solid var(--border);}
+  tbody tr.na-row{cursor:default;}
+  .na-cell{font-family:var(--font-mono);font-size:11.5px;color:var(--text-3);width:100%;text-align:center;}
+
+  /* ---------- charts ---------- */
+  .chart-panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    min-width:0;
+  }
+  .chart-body{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 310px;
+    gap:20px;
+    align-items:start;
+  }
+  @media (max-width:1000px){
+    .chart-body{grid-template-columns:minmax(0,1fr);}
+  }
+  .chart-side{display:flex;flex-direction:column;gap:12px;min-width:0;word-break:keep-all;overflow-wrap:break-word;}
+  .chart-wrap{position:relative;}
+  .chart-svg{display:block;width:100%;height:auto;cursor:crosshair;user-select:none;-webkit-user-select:none;touch-action:pan-y;}
+  .chart-svg.panning{cursor:grabbing;}
+  .chart-tools{position:absolute;top:6px;right:8px;display:flex;gap:6px;z-index:2;}
+  .chart-tools button{
+    font:600 12px var(--font-mono);
+    min-width:30px;height:28px;padding:0 9px;
+    border:1px solid var(--border-strong);
+    background:var(--surface);
+    color:var(--text-2);
+    border-radius:7px;
+    cursor:pointer;
+  }
+  .chart-tools button:hover{background:var(--surface-2);color:var(--text);}
+  .chart-tools button:focus-visible{outline:2px solid var(--trail);outline-offset:1px;}
+  .zoom-tag{
+    position:absolute;top:8px;left:58px;z-index:2;
+    font:600 11px var(--font-mono);
+    color:var(--trail-ink);background:var(--trail-soft);
+    border:1px solid var(--trail);border-radius:99px;
+    padding:2px 10px;display:none;
+  }
+  .chart-wrap.zoomed .zoom-tag{display:block;}
+  .chart-caption{
+    font-size:12px;
+    color:var(--text-3);
+    font-family:var(--font-mono);
+    line-height:1.55;
+    margin:0;
+  }
+  .chart-hint{font-size:11.5px;color:var(--text-2);font-family:var(--font-mono);line-height:1.6;margin:0;}
+  .chart-hint b{color:var(--text);font-weight:600;}
+
+  /* svg text tokens */
+  .axis-label{fill:var(--text-3);font-family:var(--font-mono);font-size:11px;}
+  .axis-line{stroke:var(--border-strong);stroke-width:1.2;}
+  .grid-line{stroke:var(--grid);stroke-width:1;}
+  .plot-border{fill:none;stroke:var(--border);stroke-width:1;}
+  .quad-label{font-family:var(--font-sans);font-size:13px;font-weight:600;}
+  .quad-label.q-tr{fill:var(--q-tr);}
+  .quad-label.q-br{fill:var(--q-br);}
+  .quad-label.q-tl{fill:var(--q-tl);}
+  .quad-label.q-bl{fill:var(--q-bl);}
+  .zoombox{fill:var(--trail);fill-opacity:.12;stroke:var(--trail);stroke-width:1.2;stroke-dasharray:4 3;pointer-events:none;}
+
+  .pt{stroke:var(--surface);stroke-width:1.8;fill:var(--dot);}
+  .pt.up{fill:var(--sig);stroke-width:2;}
+  .pt.dn{fill:var(--dn);stroke-width:2;}
+  .sig-ring{fill:none;stroke-width:1.5;opacity:.55;}
+  .sig-ring.up{stroke:var(--sig);}
+  .sig-ring.dn{stroke:var(--dn);}
+  .pt-label{font-family:var(--font-sans);font-size:12px;font-weight:600;fill:var(--text);}
+  .pt-g.up .pt-label{fill:var(--sig-ink);font-weight:700;}
+  .pt-g.dn .pt-label{fill:var(--dn-ink);font-weight:700;}
+  .leader{stroke:var(--text-3);stroke-width:1;opacity:.5;}
+
+  .pt-g{cursor:pointer;transition:opacity .15s;outline:none;}
+  .pt-g:focus-visible .pt{stroke:var(--text);stroke-width:2.5;}
+  .has-sel .pt-g:not(.sel){opacity:.2;}
+  .pt-g.sel .pt,.pt-g.sel .sig-ring{opacity:0;}
+  .pt-g.sel .pt-label{fill:var(--trail-ink);font-weight:700;font-size:13px;paint-order:stroke;stroke:var(--surface);stroke-width:3px;}
+
+  .hl .trail-path{fill:none;stroke:var(--trail);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;opacity:.85;}
+  .hl .trail-dot{fill:var(--trail);stroke:var(--surface);stroke-width:1.2;}
+  .hl .trail-glow{fill:var(--trail);opacity:.2;}
+  .hl .trail-now{fill:var(--trail);stroke:var(--surface);stroke-width:2;}
+  .hl .trail-lab{font-family:var(--font-mono);font-size:10.5px;font-weight:600;fill:var(--trail-ink);paint-order:stroke;stroke:var(--surface);stroke-width:3px;}
+
+  @media (prefers-reduced-motion: reduce){
+    .pt-g{transition:none;}
+  }
+
+  /* legend */
+  .chart-legend{display:flex;flex-direction:column;align-items:flex-start;gap:8px;font-size:12px;color:var(--text-2);font-family:var(--font-mono);}
+  .chart-legend span{display:inline-flex;align-items:center;gap:8px;line-height:1.4;}
+  .lg-dot{width:10px;height:10px;border-radius:50%;background:var(--dot);display:inline-block;flex:none;}
+  .lg-dot.up{background:var(--sig);box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--sig);margin-inline:2px;}
+  .lg-dia{width:9px;height:9px;background:var(--dn);transform:rotate(45deg);display:inline-block;flex:none;margin-inline:2px;box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--dn);}
+  .lg-line{width:18px;height:2px;border-radius:2px;background:var(--trail);display:inline-block;flex:none;}
+
+  /* ---------- selection card ---------- */
+  .pick{
+    border:1px dashed var(--border-strong);
+    border-radius:10px;
+    padding:12px 14px;
+    min-height:150px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:7px;
+    font-size:13px;
+    color:var(--text-2);
+    line-height:1.5;
+  }
+  .pick.on{
+    border:1px solid var(--trail);
+    background:var(--trail-soft);
+    justify-content:flex-start;
+  }
+  .pick-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .pick-head strong{font-size:15px;color:var(--text);}
+  .pick-tk{font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--trail-ink);}
+  .pick-sec{color:var(--text-3);font-size:12px;}
+  .pick-vals{display:flex;flex-wrap:wrap;gap:4px 18px;font-family:var(--font-mono);font-size:12.5px;color:var(--text-2);}
+  .pick-vals b{font-weight:600;}
+  .pick-vals b.pos,.pick-sub b.pos{color:var(--pos-strong);}
+  .pick-vals b.neg,.pick-sub b.neg{color:var(--neg-strong);}
+  .pick-path{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--text-2);}
+  .pick-sub{font-family:var(--font-mono);font-size:11.5px;color:var(--text-3);}
+  .pick-sig{font-size:12.5px;font-weight:600;}
+  .pick-sig.up{color:var(--sig-ink);}
+  .pick-sig.dn{color:var(--dn-ink);}
+  .qchip{font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:99px;white-space:nowrap;}
+  .qchip.sm{font-size:11px;padding:1px 8px;}
+  .qchip.q-tr,.pace-tag.q-tr{background:var(--q-tr-soft);color:var(--q-tr);}
+  .qchip.q-br,.pace-tag.q-br{background:var(--q-br-soft);color:var(--q-br);}
+  .qchip.q-tl,.pace-tag.q-tl{background:var(--q-tl-soft);color:var(--q-tl);}
+  .qchip.q-bl,.pace-tag.q-bl{background:var(--q-bl-soft);color:var(--q-bl);}
+  .pace-tag{display:inline-block;font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:99px;white-space:nowrap;margin-top:3px;}
+  .td-pace{white-space:nowrap;text-align:center;min-width:84px;}
+  .pace-val{display:block;font-family:var(--font-mono);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;}
+  .pace-val.pos{color:var(--pos-strong);}
+  .pace-val.neg{color:var(--neg-strong);}
+  .pick-read{font-size:12.5px;color:var(--text);font-weight:500;}
+  .lg-quads{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;}
+  .lg-quads .qchip{text-align:center;}
+  .muted{color:var(--text-3);}
+
+  /* ---------- 읽는 법 ---------- */
+  .guide{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:20px 22px 22px;display:flex;flex-direction:column;gap:18px;}
+  .guide h3{font-size:14px;margin:0 0 8px;font-weight:700;color:var(--text);}
+  .guide p,.guide li{font-size:13px;line-height:1.65;color:var(--text-2);margin:0;}
+  .guide ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px;}
+  .guide b{color:var(--text);font-weight:600;}
+  .guide-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;}
+  .guide table{min-width:0;width:100%;font-size:12.5px;}
+  .guide td,.guide th{padding:7px 8px;vertical-align:top;border-bottom:1px solid var(--border);text-align:left;color:var(--text-2);font-family:var(--font-sans);}
+  .guide th{font-size:11.5px;color:var(--text-3);font-weight:600;text-transform:none;letter-spacing:0;}
+  .guide tr{cursor:default;}
+  .guide tr:hover{background:transparent;}
+  .guide .ex{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+  .calc{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;}
+  .calc label{font-family:var(--font-mono);font-size:12px;color:var(--text-2);display:flex;align-items:center;gap:6px;}
+  .calc input{width:84px;font:600 13px var(--font-mono);padding:5px 8px;border:1px solid var(--border-strong);border-radius:7px;background:var(--surface);color:var(--text);}
+  .calc-out{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px;color:var(--text-2);}
+  a.jump{color:var(--accent);font-family:var(--font-mono);font-size:12.5px;text-decoration:none;font-weight:600;}
+  a.jump:hover{text-decoration:underline;}
+  footer{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    gap:10px;
+    padding-top:16px;
+    border-top:1px solid var(--border);
+    font-size:11.5px;
+    color:var(--text-3);
+    font-family:var(--font-mono);
+    line-height:1.55;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header class="masthead">
+    <div class="masthead-left">
+      <p class="eyebrow">US Equity Watchlist Desk</p>
+      <h1>관심종목 모멘텀 트래커</h1>
+      <p>관심종목 {{N_STOCK}}개의 1개월·3개월 수익률을 비교하고, 최근 3주 동안 어느 사분면으로 움직였는지 궤적으로 확인합니다.</p>
+    </div>
+    <div class="masthead-right">
+      <span class="asof">기준일 <b>{{ASOF}}</b> 종가 · 1개월 전 {{M1}} · 3개월 전 {{M3}}</span>
+      <span class="legend-chip">
+        <span class="dot"><span class="swatch" style="background:var(--pos)"></span>수익률 +</span>
+        <span class="dot"><span class="swatch" style="background:var(--neg)"></span>수익률 −</span>
+        <span class="dot"><span class="swatch" style="background:var(--sig)"></span>▲ 상승 시작</span>
+        <span class="dot"><span class="swatch dia" style="background:var(--dn)"></span>▼ 하락 시작</span>
+        <span class="dot"><span class="swatch" style="background:var(--trail)"></span>최근 3주 궤적</span>
+        <span class="dot">Δ = 1개월 − 3개월</span>
+        <span class="dot">속도 변화 = 1M − 3M÷3</span>
+        <a class="jump" href="#guide">읽는 법 ↓</a>
+      </span>
+    </div>
+  </header>
+
+  <section class="grid-2">
+    <div class="panel">
+      <div class="section-head">
+        <h2>관심종목 모멘텀</h2>
+        <span class="sub">기준 {{ASOF}} · 열 이름을 눌러 정렬</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="t" data-type="text">티커</th><th class="sortable" data-sort="n" data-type="text">종목 / 업종</th>
+              <th class="num sortable" data-sort="x">1개월 수익률</th>
+              <th class="num sortable" data-sort="y">3개월 수익률</th>
+              <th class="num sortable" data-sort="c">Δ 1M−3M</th>
+              <th class="num sortable" data-sort="pace" title="속도 변화 = 최근 1개월 − 3개월 월평균 (%p)">속도 변화</th>
+            </tr>
+          </thead>
+          <tbody id="stock-body"></tbody>
+        </table>
+      </div>
+      <p class="panel-foot">{{NOTE_STOCKS}} 행을 누르면 차트에 궤적이 표시되고, 열 이름을 누르면 오름차순·내림차순으로 정렬됩니다. ▲ 상승 시작 = 최근 3주 안에 상승 전환 구간을 거쳐 현재 상승 지속, ▼ 하락 시작 = 하락 전환 구간을 거쳐 현재 하락 지속. 속도 변화 = 1M − 3M÷3: 3개월을 월평균으로 환산해 최근 1개월과 비교한 값(＋면 최근이 더 빠름). 배당 미반영.</p>
+    </div>
+  </section>
+
+  <section class="stack">
+    <div class="chart-panel">
+      <div class="section-head">
+        <h2>관심종목 수익률 사분면</h2>
+        <span class="sub">x=1개월 · y=3개월</span>
+      </div>
+      <div class="chart-body">
+        <div id="chart-stocks"></div>
+        <div class="chart-side">
+          <div class="chart-legend" id="legend-stocks"></div>
+          <div class="pick" id="pick-stocks" aria-live="polite"></div>
+          <p class="chart-hint"><b>드래그</b> 영역 확대<br><b>Shift+드래그</b> 이동<br><b>Ctrl/⌘+휠</b> 확대·축소<br><b>더블클릭</b> 또는 초기화 버튼: 전체 보기</p>
+          <p class="chart-caption">우상단 = 상승 지속, 좌상단 = 하락 전환(단기 조정), 우하단 = 상승 전환(반등 시작), 좌하단 = 하락 지속.<br>▲ 상승 시작 = 최근 3주 안에 상승 전환 → 현재 상승 지속. ▼ 하락 시작 = 최근 3주 안에 하락 전환 → 현재 하락 지속.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="guide" id="guide">
+    <div class="section-head">
+      <h2>읽는 법</h2>
+      <span class="sub">사분면 · 속도 변화 · 신호</span>
+    </div>
+
+    <div class="guide-grid">
+      <div>
+        <h3>① 사분면 — 지금 오르는 중인가, 내리는 중인가</h3>
+        <ul>
+          <li><span class="qchip q-tr">상승 지속</span> 1M＋ 3M＋ : 오르는 중</li>
+          <li><span class="qchip q-br">상승 전환</span> 1M＋ 3M－ : 하락 뒤 최근 1개월 반등</li>
+          <li><span class="qchip q-tl">하락 전환</span> 1M－ 3M＋ : 오르다 최근 1개월 조정</li>
+          <li><span class="qchip q-bl">하락 지속</span> 1M－ 3M－ : 내리는 중</li>
+        </ul>
+        <p style="margin-top:8px">1M = 최근 1개월 수익률, 3M = 최근 3개월 수익률. 같은 하락·상승 쪽에서도 <b>지속</b>이 <b>전환</b>보다 더 진한 색입니다.</p>
+      </div>
+      <div>
+        <h3>② 속도 변화 — 요즘 속도가 평소보다 빠른가, 느린가</h3>
+        <p><b>속도 변화 = 1M − 3M÷3</b> (%p)<br>최근 1개월 수익률을 '3개월 평균 한 달치(3M÷3)'와 비교한 값입니다. ＋면 요즘이 평소보다 빠르고, －면 느립니다. 3개월 수익률 안에는 최근 1개월이 이미 포함돼 있어서, Δ(1M−3M)만 보면 꾸준히 오르는 종목도 '둔화'처럼 보일 수 있기 때문에 따로 봅니다.</p>
+        <ul style="margin-top:8px">
+          <li><b>↗ +{{PACE_BAND}} 이상</b> : 최근이 더 빠름 → 상승 가속 / 낙폭 둔화</li>
+          <li><b>→ ±{{PACE_BAND}} 이내</b> : 속도 유지</li>
+          <li><b>↘ −{{PACE_BAND}} 이하</b> : 최근이 더 느림 → 상승 둔화 / 낙폭 확대</li>
+        </ul>
+      </div>
+      <div>
+        <h3>③ 신호 — 방향이 바뀐 종목</h3>
+        <ul>
+          <li><b style="color:var(--sig-ink)">▲ 상승 시작</b> : 최근 3주 안에 <span class="qchip sm q-br">상승 전환</span> 구간을 거쳐 지금 <span class="qchip sm q-tr">상승 지속</span></li>
+          <li><b style="color:var(--dn-ink)">▼ 하락 시작</b> : 최근 3주 안에 <span class="qchip sm q-tl">하락 전환</span> 구간을 거쳐 지금 <span class="qchip sm q-bl">하락 지속</span></li>
+        </ul>
+        <p style="margin-top:8px">차트에서 점에 올리거나 표의 행을 누르면 3주 전 → 현재 이동 궤적(주황 곡선)이 나옵니다.</p>
+      </div>
+    </div>
+
+    <div>
+      <h3>④ 조합별 해석</h3>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>구간</th><th>속도 변화</th><th>읽는 법</th></tr></thead>
+        <tbody>
+          <tr><td><span class="qchip sm q-tr">상승 지속</span></td><td>＋ (↗)</td><td><b>상승 가속</b> — 오르는 속도가 빨라짐</td></tr>
+          <tr><td><span class="qchip sm q-tr">상승 지속</span></td><td>－ (↘)</td><td><b>상승 둔화</b> — 아직 오르는 중이지만 속도는 느려짐</td></tr>
+          <tr><td><span class="qchip sm q-bl">하락 지속</span></td><td>＋ (↗)</td><td><b>낙폭 둔화</b> — 회복 조짐. 그래도 아직 하락 중이며 상승 모멘텀은 아님</td></tr>
+          <tr><td><span class="qchip sm q-bl">하락 지속</span></td><td>－ (↘)</td><td><b>낙폭 확대</b> — 하락이 빨라짐</td></tr>
+          <tr><td><span class="qchip sm q-bl">하락 지속</span></td><td>🔻</td><td><b>반등 꺾임 / 상승 꺾임</b> — 1주 전엔 <span class="qchip sm q-br">상승 전환</span> 또는 <span class="qchip sm q-tr">상승 지속</span>이었는데 이번 주 하락 지속으로 내려옴. 방향이 나빠진 종목이라 속도 변화(낙폭 둔화 등)보다 이 표시를 우선해서 봅니다</td></tr>
+          <tr><td><span class="qchip sm q-br">상승 전환</span></td><td>항상 ＋</td><td>하락하던 흐름이 최근 1개월 반등으로 바뀐 구간 — 3M까지 ＋가 되면 상승 지속</td></tr>
+          <tr><td><span class="qchip sm q-tl">하락 전환</span></td><td>항상 －</td><td>오르던 흐름이 최근 1개월 꺾인 조정 구간 — 3M까지 －가 되면 하락 지속</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="ex">
+      <h3 style="margin:0">직접 계산해 보기</h3>
+      <div class="calc">
+        <label>1개월 수익률 <input id="calc-x" type="number" step="0.1" value="-1"> %</label>
+        <label>3개월 수익률 <input id="calc-y" type="number" step="0.1" value="-5"> %</label>
+      </div>
+      <div class="calc-out" id="calc-out"></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>궤적 시점: 3주 전 {{S0}} · 2주 전 {{S1}} · 1주 전 {{S2}} · 현재 {{S3}}. 각 시점의 1개월·3개월 수익률은 그 시점을 기준으로 다시 계산한 값이며, 비교일이 휴장이면 직전 거래일 종가를 씁니다.</span>
+    <span>데이터: 시세 Yahoo Finance 일별 종가(배당 미반영) · {{TICKER_LIST}}</span>
+    <span>투자 참고용이며 투자 권유가 아닙니다.</span>
+  </footer>
+
+</div>
+
+<script>
+// h = [3주 전, 2주 전, 1주 전, 현재] 각 시점의 [1개월 수익률%, 3개월 수익률%]
+const DATA = {{DATA}};
+
+const QUAD = {
+  tr:{t:'상승 지속', cls:'q-tr'}, tl:{t:'하락 전환', cls:'q-tl'},
+  br:{t:'상승 전환', cls:'q-br'}, bl:{t:'하락 지속', cls:'q-bl'}
+};
+const BAND = {{PACE_BAND}};     // 속도 변화가 ±BAND(%p) 안이면 '속도 유지'
+const paceOf = (x, y) => +(x - y / 3).toFixed(2);          // 속도 변화 = 1M − 3M÷3
+// 1주 전에 상승 쪽(상승 전환·상승 지속)이었다가 지금 하락 지속으로 내려온 종목: 속도 변화(낙폭 둔화 등)보다 이 표시를 우선한다
+const TURN = {'br>bl':'반등 꺾임', 'tr>bl':'상승 꺾임'};
+const SNAP_LABELS = ['3주 전','2주 전','1주 전','현재'];
+const EMPTY_PICK = '<span>점에 마우스를 올리거나(모바일은 탭) 표의 행을 누르면, 그 종목의 <b>3주 전 → 2주 전 → 1주 전 → 현재</b> 이동 궤적이 주황색으로 표시되고 다른 점은 흐려집니다.</span>';
+const SIG_TEXT = {up:'▲ 상승 시작', dn:'▼ 하락 시작'};
+
+const $ = id => document.getElementById(id);
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const quadOf = (x, y) => (y >= 0 ? 't' : 'b') + (x >= 0 ? 'r' : 'l');
+
+// 사분면 + 속도 변화 → 세부 상태. 상승 지속·하락 지속에서만 속도 변화를 구분한다
+function stateOf(x, y){
+  const q = quadOf(x, y), pace = paceOf(x, y);
+  const k = pace >= BAND ? 'acc' : pace <= -BAND ? 'dec' : 'flat';
+  const arrow = {acc:'↗', flat:'→', dec:'↘'}[k];
+  if(q === 'tr') return {q, k, pace, arrow, name:{acc:'상승 가속', flat:'상승 유지', dec:'상승 둔화'}[k],
+    read:{acc:'상승이 가속 중 — 최근 1개월이 3개월 평균 월 속도보다 빠릅니다.', flat:'상승 속도가 3개월 평균과 비슷합니다.', dec:'아직 오르는 중이지만 최근 1개월 속도가 3개월 평균 월 속도보다 느립니다.'}[k]};
+  if(q === 'bl') return {q, k, pace, arrow, name:{acc:'낙폭 둔화', flat:'하락 유지', dec:'낙폭 확대'}[k],
+    read:{acc:'아직 하락 중이지만 하락 속도가 완만해졌습니다(회복 조짐). 상승 모멘텀은 아닙니다.', flat:'하락 속도가 3개월 평균과 비슷합니다.', dec:'하락 속도가 3개월 평균보다 빨라졌습니다.'}[k]};
+  if(q === 'br') return {q, k, pace, arrow:'', name:'상승 전환', read:'하락하던 흐름이 최근 1개월 반등으로 바뀐 구간입니다. 3개월까지 +가 되면 상승 지속.'};
+  return {q, k, pace, arrow:'', name:'하락 전환', read:'오르던 흐름이 최근 1개월 꺾인 조정 구간입니다. 3개월까지 −가 되면 하락 지속.'};
+}
+
+// 신호: 최근 3주 안에 '전환' 구간을 거쳐 현재 '지속' 구간에 있는 종목
+//  up = 상승 전환(br) → 상승 지속(tr)   |   dn = 하락 전환(tl) → 하락 지속(bl)
+const hasEarly = (p, q) => p.h.slice(0, 3).some(([x, y]) => quadOf(x, y) === q);
+const sigOf = p => {
+  const now = quadOf(p.h[3][0], p.h[3][1]);
+  if(now === 'tr' && hasEarly(p, 'br')) return 'up';
+  if(now === 'bl' && hasEarly(p, 'tl')) return 'dn';
+  return '';
+};
+
+function fmtPp(v){
+  if(Math.abs(v) < 0.05) return '0.0%p';
+  return (v > 0 ? '+' : '') + v.toFixed(1) + '%p';
+}
+function fmtPct(v){
+  if(Math.abs(v) < 0.05) return '0.0%';
+  return (v > 0 ? '+' : '') + v.toFixed(1) + '%';
+}
+function tickStep(range){
+  return range <= 2.5 ? 0.5 : range <= 6 ? 1 : range <= 12 ? 2 : range <= 30 ? 5 : range <= 70 ? 10 : 20;
+}
+function fmtTick(t){
+  const v = Math.abs(t) < 1e-9 ? 0 : t;
+  return (v > 0 ? '+' : '') + (Number.isInteger(v) ? v : v.toFixed(1)) + '%';
+}
+// Catmull-Rom → cubic Bézier: 4개 시점을 부드럽게 잇는 곡선
+function smoothPath(pts){
+  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for(let i = 0; i < pts.length - 1; i++){
+    const p0 = pts[i-1] || pts[i], p1 = pts[i], p2 = pts[i+1], p3 = pts[i+2] || p2;
+    const c1 = [p1[0] + (p2[0]-p0[0])/6, p1[1] + (p2[1]-p0[1])/6];
+    const c2 = [p2[0] - (p3[0]-p1[0])/6, p2[1] - (p3[1]-p1[1])/6];
+    d += ` C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
+/* ---------- table ---------- */
+const paceCell = p => p.na ? '<td class="td-pace"><span class="na-cell" title="상장 3개월 미만">—</span></td>'
+  : `<td class="td-pace"><span class="pace-val ${p.pace >= 0 ? 'pos' : 'neg'}">${fmtPp(p.pace)}</span>` +
+    (p.turn ? `<span class="pace-tag q-bl" title="1주 전엔 상승 쪽이었는데 이번 주 하락 지속으로 내려왔습니다. 속도 변화(${p.st.name})보다 이 표시를 우선해서 보세요.">🔻 ${p.turn}</span></td>`
+            : `<span class="pace-tag q-${p.st.q}" title="${p.st.read}">${p.st.arrow ? p.st.arrow + ' ' : ''}${p.st.name}</span></td>`);
+const numCell = v => `<td class="td-num"><span class="num-val ${v >= 0 ? 'pos' : 'neg'}">${fmtPct(v)}</span></td>`;
+const NA_NUM = '<td class="td-num"><span class="na-cell" title="상장 3개월 미만: 3개월 수익률이 없어 계산할 수 없습니다">—</span></td>';
+function renderTable(bodyId, list){
+  const ok = list.filter(p => !p.na);
+  const rows = [...ok].sort((a,b) => b.c - a.c).concat(list.filter(p => p.na));   // 데이터 없는 행은 맨 아래
+  $(bodyId).innerHTML = rows.map(p => {
+    const chipHtml = p.na ? '<span class="sig-chip na">상장 3개월 미만</span>'
+      : (p.sig ? `<span class="sig-chip ${p.sig}">${SIG_TEXT[p.sig]}</span>` : '');
+    return `<tr ${p.na ? 'class="na-row"' : 'tabindex="0"'} data-t="${p.t}">` +
+      `<td class="td-ticker"><span class="ticker">${p.t}</span></td>` +
+      `<td class="td-name"><span class="name">${p.n}${chipHtml}</span><span class="sector">${p.s}</span></td>` +
+      numCell(p.x) + (p.na ? NA_NUM + NA_NUM : numCell(p.y) + numCell(p.c)) + paceCell(p) + `</tr>`;
+  }).join('');
+}
+
+/* ---------- 차트 범위 ---------- */
+function fullDomain(list){
+  const xs = [], ys = [];
+  list.forEach(p => p.h.forEach(([x, y]) => { xs.push(x); ys.push(y); }));  // 4개 시점 모두 포함
+  const xMin = Math.min(...xs), xMax = Math.max(...xs), yMin = Math.min(...ys), yMax = Math.max(...ys);
+  const xs_ = tickStep(xMax - xMin), ys_ = tickStep(yMax - yMin);
+  let x0 = Math.floor((xMin - (xMax - xMin) * 0.08) / xs_) * xs_;
+  let x1 = Math.ceil((xMax + (xMax - xMin) * 0.08) / xs_) * xs_;
+  let y0 = Math.floor((yMin - (yMax - yMin) * 0.08) / ys_) * ys_;
+  let y1 = Math.ceil((yMax + (yMax - yMin) * 0.08) / ys_) * ys_;
+  if(x0 > -xs_) x0 = -xs_;
+  if(y0 > -ys_) y0 = -ys_;
+  if(x1 < xs_) x1 = xs_;
+  if(y1 < ys_) y1 = ys_;
+  return {x0, x1, y0, y1};
+}
+
+/* ---------- scatter: 한 번의 그리기 ---------- */
+function paint(svg, list, dom, W, H, uid){
+  const M = {left:54, right:30, top:34, bottom:46};
+  const plotW = W - M.left - M.right, plotH = H - M.top - M.bottom;
+  const {x0, x1, y0, y1} = dom;
+  const sx = v => M.left + (v - x0) / (x1 - x0) * plotW;
+  const sy = v => M.top + plotH - (v - y0) / (y1 - y0) * plotH;
+  const xStep = tickStep(x1 - x0), yStep = tickStep(y1 - y0);
+  const ticks = (min, max, step) => {
+    const out = [];
+    for(let t = Math.ceil(min / step - 1e-9) * step; t <= max + 1e-9; t += step) out.push(Math.round(t * 1000) / 1000);
+    return out;
+  };
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  let s = `<defs><clipPath id="cp-${uid}"><rect x="${M.left}" y="${M.top}" width="${plotW}" height="${plotH}"/></clipPath></defs>`;
+  ticks(x0, x1, xStep).forEach(t => {
+    const x = sx(t);
+    s += `<line class="grid-line" x1="${x}" y1="${M.top}" x2="${x}" y2="${M.top+plotH}"/>`;
+    s += `<text class="axis-label" x="${x}" y="${M.top+plotH+17}" text-anchor="middle">${fmtTick(t)}</text>`;
+  });
+  ticks(y0, y1, yStep).forEach(t => {
+    const y = sy(t);
+    s += `<line class="grid-line" x1="${M.left}" y1="${y}" x2="${M.left+plotW}" y2="${y}"/>`;
+    s += `<text class="axis-label" x="${M.left-8}" y="${y+3.8}" text-anchor="end">${fmtTick(t)}</text>`;
+  });
+  if(x0 < 0 && x1 > 0) s += `<line class="axis-line" x1="${sx(0)}" y1="${M.top}" x2="${sx(0)}" y2="${M.top+plotH}"/>`;
+  if(y0 < 0 && y1 > 0) s += `<line class="axis-line" x1="${M.left}" y1="${sy(0)}" x2="${M.left+plotW}" y2="${sy(0)}"/>`;
+  s += `<rect class="plot-border" x="${M.left}" y="${M.top}" width="${plotW}" height="${plotH}"/>`;
+
+  // 사분면 이름: 해당 사분면이 현재 화면에 걸쳐 있을 때만, 화면 모서리에 표시
+  const padIn = 9;
+  if(x1 > 0 && y1 > 0) s += `<text class="quad-label ${QUAD.tr.cls}" x="${M.left+plotW-padIn}" y="${M.top+17}" text-anchor="end">${QUAD.tr.t}</text>`;
+  if(x0 < 0 && y1 > 0) s += `<text class="quad-label ${QUAD.tl.cls}" x="${M.left+padIn}" y="${M.top+17}" text-anchor="start">${QUAD.tl.t}</text>`;
+  if(x1 > 0 && y0 < 0) s += `<text class="quad-label ${QUAD.br.cls}" x="${M.left+plotW-padIn}" y="${M.top+plotH-9}" text-anchor="end">${QUAD.br.t}</text>`;
+  if(x0 < 0 && y0 < 0) s += `<text class="quad-label ${QUAD.bl.cls}" x="${M.left+padIn}" y="${M.top+plotH-9}" text-anchor="start">${QUAD.bl.t}</text>`;
+  s += `<text class="axis-label" x="${M.left+plotW}" y="${H-7}" text-anchor="end">1개월 수익률 →</text>`;
+  s += `<text class="axis-label" x="${M.left+2}" y="${M.top-13}" text-anchor="start">↑ 3개월 수익률</text>`;
+
+  // 화면 안에 있는 점만 그림 + 라벨끼리 겹치지 않게 배치
+  const visible = list.filter(p => p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1);
+  const placed = [], labelBoxes = {};
+  const cand = [
+    [9,-9,'start'],[9,15,'start'],[-9,-9,'end'],[-9,15,'end'],
+    [0,-15,'middle'],[0,22,'middle'],[15,4,'start'],[-15,4,'end'],
+    [20,-18,'start'],[-20,-18,'end'],[20,24,'start'],[-20,24,'end']
+  ];
+  const overlaps = (bx, arr) => arr.some(o => !(bx.x2 < o.x1 || bx.x1 > o.x2 || bx.y2 < o.y1 || bx.y1 > o.y2));
+  const boxFor = (lx, ly, anchor, w) =>
+    anchor === 'start' ? {x1:lx, x2:lx+w, y1:ly-10, y2:ly+3}
+    : anchor === 'end' ? {x1:lx-w, x2:lx, y1:ly-10, y2:ly+3}
+    : {x1:lx-w/2, x2:lx+w/2, y1:ly-10, y2:ly+3};
+  const inPlot = bx => bx.x1 >= M.left && bx.x2 <= M.left+plotW && bx.y1 >= M.top && bx.y2 <= M.top+plotH+14;
+
+  s += `<g clip-path="url(#cp-${uid})">`;
+  visible.forEach(p => {
+    const px = sx(p.x), py = sy(p.y);
+    const textW = Math.max(p.t.length * 7.4, 24) + 2;
+    let chosen = null;
+    for(const [dx, dy, anchor] of cand){
+      const lx = px + dx, ly = py + dy;
+      const bx = boxFor(lx, ly, anchor, textW);
+      if(inPlot(bx) && !overlaps(bx, placed)){ chosen = {lx, ly, anchor, bx}; break; }
+    }
+    if(!chosen){
+      const [dx, dy, anchor] = cand[0];
+      chosen = {lx: px + dx, ly: py + dy, anchor, bx: boxFor(px + dx, py + dy, anchor, textW)};
+    }
+    placed.push(chosen.bx);
+    labelBoxes[p.t] = chosen.bx;
+
+    const r = p.sig ? 6.4 : 5.2;
+    s += `<g class="pt-g${p.sig ? ' ' + p.sig : ''}" data-t="${p.t}" tabindex="0" role="button" ` +
+         `aria-label="${p.t} ${p.n}, 1개월 ${fmtPct(p.x)}, 3개월 ${fmtPct(p.y)}${p.sig ? ', ' + SIG_TEXT[p.sig] + ' 신호' : ''}">` +
+         `<circle cx="${px}" cy="${py}" r="16" fill="transparent"/>`;
+    if(p.sig) s += `<circle class="sig-ring ${p.sig}" cx="${px}" cy="${py}" r="10.5"/>`;
+    if(p.sig === 'dn'){
+      const d = r * 1.25;
+      s += `<path class="pt dn" d="M${px},${py-d} L${px+d},${py} L${px},${py+d} L${px-d},${py} Z"/>`;
+    } else {
+      s += `<circle class="pt${p.sig ? ' ' + p.sig : ''}" cx="${px}" cy="${py}" r="${r}"/>`;
+    }
+    if(Math.hypot(chosen.lx - px, chosen.ly - py) > 14){
+      s += `<line class="leader" x1="${px}" y1="${py}" x2="${chosen.lx}" y2="${chosen.ly}"/>`;
+    }
+    s += `<text class="pt-label" x="${chosen.lx}" y="${chosen.ly}" text-anchor="${chosen.anchor}">${p.t}</text></g>`;
+  });
+  s += `</g><g class="hl" pointer-events="none" clip-path="url(#cp-${uid})"></g>`;
+  svg.innerHTML = s;
+
+  const hl = svg.querySelector('.hl');
+  const byT = Object.fromEntries(list.map(p => [p.t, p]));
+  // 선택한 종목의 3주 궤적을 주황색으로 그리기
+  function highlight(t){
+    if(!t){ hl.innerHTML = ''; return; }
+    const p = byT[t];
+    const pts = p.h.map(([x, y]) => [sx(x), sy(y)]);
+    let h = `<path class="trail-path" d="${smoothPath(pts)}"/>`;
+    pts.forEach(([x, y], i) => {
+      if(i < 3) h += `<circle class="trail-dot" cx="${x}" cy="${y}" r="${(3.4 + i * 0.8).toFixed(1)}" style="opacity:${(0.5 + i * 0.15).toFixed(2)}"/>`;
+    });
+    const [nx, ny] = pts[3];
+    h += `<circle class="trail-glow" cx="${nx}" cy="${ny}" r="14"/><circle class="trail-now" cx="${nx}" cy="${ny}" r="7"/>`;
+
+    const occupied = [];
+    if(labelBoxes[t]) occupied.push(labelBoxes[t]);
+    pts.forEach(([x, y], i) => { const r = i === 3 ? 11 : 7; occupied.push({x1:x-r, x2:x+r, y1:y-r, y2:y+r}); });
+    const lc = [[0,18,'middle'],[0,-11,'middle'],[11,4,'start'],[-11,4,'end'],[12,19,'start'],[-12,19,'end'],[12,-11,'start'],[-12,-11,'end']];
+    [3, 2, 1, 0].forEach(i => {
+      const [x, y] = pts[i];
+      const w = SNAP_LABELS[i].length * 10 + 4;
+      let pick = null;
+      for(const [dx, dy, anchor] of lc){
+        const bx = boxFor(x + dx, y + dy, anchor, w);
+        if(inPlot(bx) && !overlaps(bx, occupied)){ pick = {lx:x+dx, ly:y+dy, anchor, bx}; break; }
+      }
+      if(!pick){ const [dx, dy, anchor] = lc[0]; pick = {lx:x+dx, ly:y+dy, anchor, bx: boxFor(x+dx, y+dy, anchor, w)}; }
+      occupied.push(pick.bx);
+      h += `<text class="trail-lab" x="${pick.lx}" y="${pick.ly}" text-anchor="${pick.anchor}">${SNAP_LABELS[i]}</text>`;
+    });
+    hl.innerHTML = h;
+  }
+  return {sx, sy, M, plotW, plotH, visible: visible.length, highlight};
+}
+
+/* ---------- board: 표 + 차트 + 상세 카드 + 확대·축소를 하나로 묶음 ---------- */
+function makeBoard({list: all, chartId, bodyId, pickId, legendId}){
+  all.forEach(p => {
+    if(!p.h){ p.na = true; p.x = p.x1m; p.y = null; p.c = null; p.sig = ''; return; }   // 상장 3개월 미만
+    p.x = p.h[3][0]; p.y = p.h[3][1]; p.c = +(p.x - p.y).toFixed(2); p.sig = sigOf(p);
+    p.pace = paceOf(p.x, p.y); p.st = stateOf(p.x, p.y);
+    p.turn = TURN[quadOf(p.h[2][0], p.h[2][1]) + '>' + p.st.q] || null;
+  });
+  const list = all.filter(p => !p.na), naList = all.filter(p => p.na);
+  const byT = Object.fromEntries(list.map(p => [p.t, p]));
+  renderTable(bodyId, all);
+
+  const host = $(chartId), body = $(bodyId), pick = $(pickId);
+  host.innerHTML =
+    `<div class="chart-wrap"><svg class="chart-svg" role="group" aria-label="1개월·3개월 수익률 사분면 차트"></svg>` +
+    `<div class="zoom-tag"></div>` +
+    `<div class="chart-tools"><button type="button" data-act="in" aria-label="확대" title="확대">＋</button>` +
+    `<button type="button" data-act="out" aria-label="축소" title="축소">－</button>` +
+    `<button type="button" data-act="reset" title="전체 보기">초기화</button></div></div>`;
+  const wrap = host.firstChild, svg = wrap.querySelector('svg'), tag = wrap.querySelector('.zoom-tag');
+  const tools = wrap.querySelector('.chart-tools');
+
+  const nUp = list.filter(p => p.sig === 'up').length, nDn = list.filter(p => p.sig === 'dn').length;
+  $(legendId).innerHTML =
+    `<span class="lg-quads"><span class="qchip sm q-tl">하락 전환</span><span class="qchip sm q-tr">상승 지속</span><span class="qchip sm q-bl">하락 지속</span><span class="qchip sm q-br">상승 전환</span></span>` +
+    `<span><i class="lg-dot"></i>일반</span>` +
+    `<span><i class="lg-dot up"></i>▲ 상승 시작 · ${nUp}개</span>` +
+    `<span><i class="lg-dia"></i>▼ 하락 시작 · ${nDn}개</span>` +
+    `<span><i class="lg-line"></i>선택 시 최근 3주 궤적</span>` +
+    (naList.length ? `<span class="muted">차트 제외: ${naList.map(p => p.t).join('·')} (상장 3개월 미만)</span>` : '');
+
+  const FULL = fullDomain(list);
+  let dom = {...FULL}, W = 640, H = 420, ctx = null;
+  let hover = null, pin = null, drag = null, justDragged = false;
+
+  const isFull = () => ['x0','x1','y0','y1'].every(k => Math.abs(dom[k] - FULL[k]) < 1e-6);
+  function size(){
+    W = Math.max(300, Math.round(host.clientWidth || 640));
+    H = W < 520 ? Math.round(W * 1.05) : Math.round(Math.min(W * 0.6, 680));
+  }
+
+  /* --- 상세 카드 --- */
+  const chip = (k, sm) => `<span class="qchip ${QUAD[k].cls}${sm ? ' sm' : ''}">${QUAD[k].t}</span>`;
+  const sgn = v => v >= 0 ? 'pos' : 'neg';
+  function cardHtml(p){
+    const qs = p.h.map(([x, y]) => quadOf(x, y));
+    const [x0_, y0_] = p.h[0];
+    let note = '';
+    if(p.sig){
+      const from = p.sig === 'up' ? 'br' : 'tl', to = p.sig === 'up' ? 'tr' : 'bl';
+      const when = SNAP_LABELS.filter((_, i) => i < 3 && qs[i] === from).join('·');
+      note = `<div class="pick-sig ${p.sig}">${SIG_TEXT[p.sig]} · ${when}에 ${QUAD[from].t} 구간이었다가 현재 ${QUAD[to].t}에 진입 — ` +
+             `${p.sig === 'up' ? '오르기 시작했을 가능성, 주의 깊게 관찰' : '내리기 시작했을 가능성, 주의 깊게 관찰'}</div>`;
+    }
+    return `<div class="pick-head">${chip(qs[3])}<strong>${p.n}</strong><span class="pick-tk">${p.t}</span><span class="pick-sec">${p.s}</span></div>` +
+      `<div class="pick-vals"><span>1개월 <b class="${sgn(p.x)}">${fmtPct(p.x)}</b></span>` +
+      `<span>3개월 <b class="${sgn(p.y)}">${fmtPct(p.y)}</b></span>` +
+      `<span>Δ <b class="${sgn(p.c)}">${fmtPct(p.c)}</b></span>` +
+      `<span>속도 변화 <b class="${sgn(p.pace)}">${fmtPp(p.pace)}</b></span></div>` +
+      (p.turn
+        ? `<div class="pick-read"><span class="pace-tag q-bl" style="margin:0 6px 0 0">🔻 ${p.turn}</span>1주 전에는 ${QUAD[qs[2]].t} 구간이었는데 이번 주 하락 지속으로 내려왔습니다. ` +
+          `속도 변화(${fmtPp(p.pace)}, ${p.st.name})는 3개월 평균 한 달치보다 덜 빠지고 있다는 뜻일 뿐, 상승이 이어지고 있다는 뜻은 아닙니다.</div>`
+        : `<div class="pick-read"><span class="pace-tag q-${p.st.q}" style="margin:0 6px 0 0">${p.st.arrow ? p.st.arrow + ' ' : ''}${p.st.name}</span>${p.st.read}</div>`) +
+      `<div class="pick-sub">3개월 월평균 ${fmtPct(+(p.y / 3).toFixed(2))} vs 최근 1개월 ${fmtPct(p.x)}</div>` +
+      `<div class="pick-path"><span class="muted">3주 전</span>${chip(qs[0], true)}<span class="muted">→</span><span class="muted">현재</span>${chip(qs[3], true)}` +
+      (qs[0] === qs[3] ? '<span class="muted">사분면 유지</span>' : '') + `</div>` +
+      `<div class="pick-sub">1개월 ${fmtPct(x0_)} → <b class="${sgn(p.x)}">${fmtPct(p.x)}</b> · 3개월 ${fmtPct(y0_)} → <b class="${sgn(p.y)}">${fmtPct(p.y)}</b></div>` + note;
+  }
+
+  function apply(){
+    const t = hover || pin;
+    svg.classList.toggle('has-sel', !!t);
+    svg.querySelectorAll('.pt-g').forEach(g => g.classList.toggle('sel', g.dataset.t === t));
+    body.querySelectorAll('tr').forEach(r => r.classList.toggle('sel', r.dataset.t === t));
+    if(ctx) ctx.highlight(t);
+    pick.classList.toggle('on', !!t);
+    pick.innerHTML = t ? cardHtml(byT[t]) : EMPTY_PICK;
+  }
+  function draw(){
+    ctx = paint(svg, list, dom, W, H, chartId);
+    const zoomed = !isFull();
+    wrap.classList.toggle('zoomed', zoomed);
+    if(zoomed) tag.textContent = `확대 중 · ${ctx.visible}/${list.length}개 표시`;
+    apply();
+  }
+  const togglePin = t => { pin = (pin === t) ? null : t; apply(); };
+
+  /* --- 표 행 / 점 선택 (이벤트 위임: 다시 그려도 유지) --- */
+  svg.addEventListener('pointerover', e => {
+    if(e.pointerType !== 'mouse' || drag) return;
+    const g = e.target.closest('.pt-g');
+    if(g && g.dataset.t !== hover){ hover = g.dataset.t; apply(); }
+  });
+  svg.addEventListener('pointerout', e => {
+    if(e.pointerType !== 'mouse' || drag) return;
+    const g = e.target.closest('.pt-g');
+    if(!g) return;
+    const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('.pt-g') : null;
+    if(to !== g){ hover = to ? to.dataset.t : null; apply(); }
+  });
+  svg.addEventListener('focusin', e => { const g = e.target.closest('.pt-g'); if(g){ hover = g.dataset.t; apply(); } });
+  svg.addEventListener('focusout', e => {
+    const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('.pt-g') : null;
+    if(!to && hover){ hover = null; apply(); }
+  });
+  svg.addEventListener('click', e => {
+    if(justDragged) return;
+    const g = e.target.closest('.pt-g');
+    if(g) togglePin(g.dataset.t); else { pin = null; apply(); }
+  });
+  svg.addEventListener('keydown', e => {
+    const g = e.target.closest('.pt-g');
+    if(g && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); togglePin(g.dataset.t); }
+  });
+  body.querySelectorAll('tr:not(.na-row)').forEach(r => {
+    const t = r.dataset.t;
+    r.addEventListener('pointerenter', e => { if(e.pointerType === 'mouse'){ hover = t; apply(); } });
+    r.addEventListener('pointerleave', e => { if(e.pointerType === 'mouse'){ hover = null; apply(); } });
+    r.addEventListener('focus', () => { hover = t; apply(); });
+    r.addEventListener('blur', () => { hover = null; apply(); });
+    r.addEventListener('click', () => togglePin(t));
+    r.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); togglePin(t); } });
+  });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && (pin || !isFull())){ pin = null; apply(); } });
+
+  /* --- 확대·축소 --- */
+  const svgPt = e => {
+    const r = svg.getBoundingClientRect();
+    return {x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height)};
+  };
+  const inPlotPt = p => ctx && p.x >= ctx.M.left && p.x <= ctx.M.left + ctx.plotW && p.y >= ctx.M.top && p.y <= ctx.M.top + ctx.plotH;
+  const toData = p => ({
+    x: dom.x0 + (p.x - ctx.M.left) / ctx.plotW * (dom.x1 - dom.x0),
+    y: dom.y1 - (p.y - ctx.M.top) / ctx.plotH * (dom.y1 - dom.y0)
+  });
+  const MIN_RANGE = 0.4;
+  function zoomBy(f, cx, cy){
+    const mx = cx ?? (dom.x0 + dom.x1) / 2, my = cy ?? (dom.y0 + dom.y1) / 2;
+    let n = {x0: mx - (mx - dom.x0) * f, x1: mx + (dom.x1 - mx) * f, y0: my - (my - dom.y0) * f, y1: my + (dom.y1 - my) * f};
+    if(n.x1 - n.x0 >= FULL.x1 - FULL.x0){ n.x0 = FULL.x0; n.x1 = FULL.x1; }
+    if(n.y1 - n.y0 >= FULL.y1 - FULL.y0){ n.y0 = FULL.y0; n.y1 = FULL.y1; }
+    if(n.x1 - n.x0 < MIN_RANGE || n.y1 - n.y0 < MIN_RANGE) return;
+    dom = n; draw();
+  }
+  tools.addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.act === 'reset'){ dom = {...FULL}; draw(); }
+    else zoomBy(b.dataset.act === 'in' ? 0.6 : 1 / 0.6);
+  });
+  svg.addEventListener('dblclick', () => { dom = {...FULL}; draw(); });
+  svg.addEventListener('wheel', e => {
+    if(!(e.ctrlKey || e.metaKey)) return;       // 일반 스크롤은 그대로 페이지 스크롤
+    const p = svgPt(e); if(!inPlotPt(p)) return;
+    e.preventDefault();
+    const d = toData(p);
+    zoomBy(e.deltaY < 0 ? 0.8 : 1.25, d.x, d.y);
+  }, {passive:false});
+
+  svg.addEventListener('pointerdown', e => {
+    if(e.button !== 0 || e.pointerType === 'touch') return;   // 터치는 페이지 스크롤 우선, 버튼으로 확대
+    const p = svgPt(e); if(!inPlotPt(p)) return;
+    drag = {x: p.x, y: p.y, mode: e.shiftKey ? 'pan' : 'zoom', moved: false, id: e.pointerId, start: {...dom}, band: null};
+  });
+  svg.addEventListener('pointermove', e => {
+    if(!drag) return;
+    const p = svgPt(e);
+    if(!drag.moved){
+      if(Math.hypot(p.x - drag.x, p.y - drag.y) < 5) return;
+      drag.moved = true;
+      try{ svg.setPointerCapture(drag.id); }catch(_){}
+      hover = null; apply();
+      if(drag.mode === 'pan') svg.classList.add('panning');
+    }
+    if(drag.mode === 'pan'){
+      const dx = (p.x - drag.x) / ctx.plotW * (drag.start.x1 - drag.start.x0);
+      const dy = (p.y - drag.y) / ctx.plotH * (drag.start.y1 - drag.start.y0);
+      dom = {x0: drag.start.x0 - dx, x1: drag.start.x1 - dx, y0: drag.start.y0 + dy, y1: drag.start.y1 + dy};
+      draw();
+    } else {
+      const {M, plotW, plotH} = ctx;
+      const cl = (v, a, b) => Math.max(a, Math.min(b, v));
+      const ax = cl(Math.min(drag.x, p.x), M.left, M.left + plotW), bx = cl(Math.max(drag.x, p.x), M.left, M.left + plotW);
+      const ay = cl(Math.min(drag.y, p.y), M.top, M.top + plotH), by = cl(Math.max(drag.y, p.y), M.top, M.top + plotH);
+      if(!drag.band){
+        drag.band = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        drag.band.setAttribute('class', 'zoombox');
+        svg.appendChild(drag.band);
+      }
+      drag.band.setAttribute('x', ax); drag.band.setAttribute('y', ay);
+      drag.band.setAttribute('width', bx - ax); drag.band.setAttribute('height', by - ay);
+      drag.rect = {ax, bx, ay, by};
+    }
+  });
+  const endDrag = e => {
+    if(!drag) return;
+    const d = drag; drag = null;
+    svg.classList.remove('panning');
+    if(d.band) d.band.remove();
+    try{ svg.releasePointerCapture(d.id); }catch(_){}
+    if(!d.moved) return;
+    justDragged = true; setTimeout(() => { justDragged = false; }, 0);
+    if(d.mode === 'zoom' && d.rect && d.rect.bx - d.rect.ax > 10 && d.rect.by - d.rect.ay > 10){
+      const a = toData({x: d.rect.ax, y: d.rect.by}), b = toData({x: d.rect.bx, y: d.rect.ay});
+      if(b.x - a.x >= MIN_RANGE && b.y - a.y >= MIN_RANGE){ dom = {x0: a.x, x1: b.x, y0: a.y, y1: b.y}; draw(); }
+    }
+  };
+  svg.addEventListener('pointerup', endDrag);
+  svg.addEventListener('pointercancel', endDrag);
+
+  /* --- 표 정렬: 열 이름을 누르면 오름차순 ↔ 내림차순 --- */
+  (function(){
+    const ths = [...body.closest('table').querySelectorAll('th[data-sort]')];
+    const byTk = Object.fromEntries(all.map(p => [p.t, p]));
+    let cur = {key:'c', dir:-1};                        // 처음에는 Δ 내림차순
+    const cmp = (a, b, key, dir) => {
+      if(a.na !== b.na) return a.na ? 1 : -1;           // 데이터 없는 행은 항상 맨 아래
+      if(a.na) return a.t.localeCompare(b.t);
+      const va = key === 'n' ? a.n : key === 't' ? a.t : a[key], vb = key === 'n' ? b.n : key === 't' ? b.t : b[key];
+      const r = typeof va === 'string' ? va.localeCompare(vb, 'ko') : va - vb;
+      return r ? r * dir : a.t.localeCompare(b.t);
+    };
+    function sortRows(){
+      [...body.querySelectorAll('tr')].sort((ra, rb) => cmp(byTk[ra.dataset.t], byTk[rb.dataset.t], cur.key, cur.dir))
+        .forEach(r => body.appendChild(r));
+      ths.forEach(th => {
+        const on = th.dataset.sort === cur.key;
+        if(on) th.setAttribute('aria-sort', cur.dir > 0 ? 'ascending' : 'descending'); else th.removeAttribute('aria-sort');
+        th.querySelector('.arr').textContent = on ? (cur.dir > 0 ? '▲' : '▼') : '';
+      });
+    }
+    ths.forEach(th => {
+      th.insertAdjacentHTML('beforeend', '<span class="arr" aria-hidden="true"></span>');
+      th.tabIndex = 0;
+      const go = () => {
+        const k = th.dataset.sort;
+        cur = cur.key === k ? {key:k, dir:-cur.dir} : {key:k, dir: th.dataset.type === 'text' ? 1 : -1};   // 숫자는 큰 값부터, 글자는 가나다순부터
+        sortRows();
+      };
+      th.addEventListener('click', go);
+      th.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); } });
+    });
+    sortRows();
+  })();
+
+  /* --- 화면 폭에 맞춰 다시 그리기 --- */
+  let lastW = 0;
+  size(); draw(); lastW = host.clientWidth;
+  if('ResizeObserver' in window){
+    new ResizeObserver(() => {
+      const w = Math.round(host.clientWidth);
+      if(Math.abs(w - lastW) < 2) return;
+      lastW = w; size(); draw();
+    }).observe(host);
+  }
+  return {select: t => { pin = t; hover = null; apply(); }, zoom: (a, b, c, d) => { dom = {x0: a, x1: b, y0: c, y1: d}; draw(); }, reset: () => { dom = {...FULL}; draw(); }};
+}
+
+/* ---------- 읽는 법: 직접 계산 ---------- */
+function calc(){
+  const x = parseFloat($('calc-x').value), y = parseFloat($('calc-y').value), out = $('calc-out');
+  if(!isFinite(x) || !isFinite(y)){ out.textContent = '숫자를 입력하세요.'; return; }
+  const st = stateOf(x, y);
+  out.innerHTML = `<span class="qchip q-${st.q}">${QUAD[st.q].t}</span>` +
+    `<span>속도 변화 <b>${fmtPp(st.pace)}</b> (3개월 월평균 ${fmtPct(+(y/3).toFixed(2))} → 최근 1개월 ${fmtPct(x)})</span>` +
+    `<span class="pace-tag q-${st.q}" style="margin:0">${st.arrow ? st.arrow + ' ' : ''}${st.name}</span><span>${st.read}</span>`;
+}
+$('calc-x').addEventListener('input', calc); $('calc-y').addEventListener('input', calc); calc();
+
+window.boards = {
+  stocks: makeBoard({list: DATA.stocks, chartId: 'chart-stocks', bodyId: 'stock-body', pickId: 'pick-stocks', legendId: 'legend-stocks'})
+};
+</script>
+</body>
+</html>
