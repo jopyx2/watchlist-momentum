@@ -166,6 +166,133 @@ nav button.on{color:var(--text);font-weight:700}
   .grp{padding-right:20px}
   .sheet{max-width:640px;border-radius:24px;bottom:24px;left:0;right:0}
 }
+.pcchart{
+  --border:var(--line); --border-strong:var(--text-3); --grid:var(--line);
+  --pos:var(--tr); --pos-strong:var(--tr); --neg:var(--bl); --neg-strong:var(--bl);
+  --q-tr:var(--tr); --q-br:var(--br); --q-tl:var(--tl); --q-bl:var(--bl);
+  --q-tr-soft:var(--tr-bg); --q-br-soft:var(--br-bg); --q-tl-soft:var(--tl-bg); --q-bl-soft:var(--bl-bg);
+  --sig-ink:var(--sig); --dn-ink:var(--dn);
+  --trail-ink:#b24705; --trail-soft:#fff1e4; --shadow:none;
+  --font-mono:var(--font); --font-sans:var(--font);
+}
+@media (prefers-color-scheme: dark){ .pcchart{ --trail-ink:#ffb372; --trail-soft:#33200f; --trail:#ff8a2a; } }
+.pcchart .qchip{display:inline-block}
+.pcchart .chart-body{align-items:stretch}
+.pcchart .chart-hint b{color:var(--text)}
+.pcpanel{background:var(--surface);border-radius:18px;padding:18px;margin-bottom:10px}
+.pcchart .chart-body{display:grid;
+    grid-template-columns:minmax(0,1fr) 310px;
+    gap:20px;
+    align-items:start;}
+@media (max-width:1000px){
+.pcchart .chart-body{grid-template-columns:minmax(0,1fr);}
+}
+.pcchart .chart-side{display:flex;flex-direction:column;gap:12px;min-width:0;word-break:keep-all;overflow-wrap:break-word;}
+.pcchart .chart-wrap{position:relative;}
+.pcchart .chart-svg{display:block;width:100%;height:auto;cursor:crosshair;user-select:none;-webkit-user-select:none;touch-action:pan-y;}
+.pcchart .chart-svg.panning{cursor:grabbing;}
+.pcchart .chart-tools{position:absolute;top:6px;right:8px;display:flex;gap:6px;z-index:2;}
+.pcchart .chart-tools button{font:600 12px var(--font-mono);
+    min-width:30px;height:28px;padding:0 9px;
+    border:1px solid var(--border-strong);
+    background:var(--surface);
+    color:var(--text-2);
+    border-radius:7px;
+    cursor:pointer;}
+.pcchart .chart-tools button:hover{background:var(--surface-2);color:var(--text);}
+.pcchart .chart-tools button:focus-visible{outline:2px solid var(--trail);outline-offset:1px;}
+.pcchart .zoom-tag{position:absolute;top:8px;left:58px;z-index:2;
+    font:600 11px var(--font-mono);
+    color:var(--trail-ink);background:var(--trail-soft);
+    border:1px solid var(--trail);border-radius:99px;
+    padding:2px 10px;display:none;}
+.pcchart .chart-wrap.zoomed .zoom-tag{display:block;}
+.pcchart .chart-caption{font-size:12px;
+    color:var(--text-3);
+    font-family:var(--font-mono);
+    line-height:1.55;
+    margin:0;}
+.pcchart .chart-hint{font-size:11.5px;color:var(--text-2);font-family:var(--font-mono);line-height:1.6;margin:0;}
+.pcchart .chart-hint b{color:var(--text);font-weight:600;}
+.pcchart .axis-label{fill:var(--text-3);font-family:var(--font-mono);font-size:11px;}
+.pcchart .axis-line{stroke:var(--border-strong);stroke-width:1.2;}
+.pcchart .grid-line{stroke:var(--grid);stroke-width:1;}
+.pcchart .plot-border{fill:none;stroke:var(--border);stroke-width:1;}
+.pcchart .quad-label{font-family:var(--font-sans);font-size:13px;font-weight:600;}
+.pcchart .quad-label.q-tr{fill:var(--q-tr);}
+.pcchart .quad-label.q-br{fill:var(--q-br);}
+.pcchart .quad-label.q-tl{fill:var(--q-tl);}
+.pcchart .quad-label.q-bl{fill:var(--q-bl);}
+.pcchart .zoombox{fill:var(--trail);fill-opacity:.12;stroke:var(--trail);stroke-width:1.2;stroke-dasharray:4 3;pointer-events:none;}
+.pcchart .pt{stroke:var(--surface);stroke-width:1.8;fill:var(--dot);}
+.pcchart .pt.up{fill:var(--sig);stroke-width:2;}
+.pcchart .pt.dn{fill:var(--dn);stroke-width:2;}
+.pcchart .sig-ring{fill:none;stroke-width:1.5;opacity:.55;}
+.pcchart .sig-ring.up{stroke:var(--sig);}
+.pcchart .sig-ring.dn{stroke:var(--dn);}
+.pcchart .pt-label{font-family:var(--font-sans);font-size:12px;font-weight:600;fill:var(--text);}
+.pcchart .pt-g.up .pt-label{fill:var(--sig-ink);font-weight:700;}
+.pcchart .pt-g.dn .pt-label{fill:var(--dn-ink);font-weight:700;}
+.pcchart .leader{stroke:var(--text-3);stroke-width:1;opacity:.5;}
+.pcchart .pt-g{cursor:pointer;transition:opacity .15s;outline:none;}
+.pcchart .pt-g:focus-visible .pt{stroke:var(--text);stroke-width:2.5;}
+.pcchart .has-sel .pt-g:not(.sel){opacity:.2;}
+.pcchart .pt-g.sel .pt, .pcchart .pt-g.sel .sig-ring{opacity:0;}
+.pcchart .pt-g.sel .pt-label{fill:var(--trail-ink);font-weight:700;font-size:13px;paint-order:stroke;stroke:var(--surface);stroke-width:3px;}
+.pcchart .hl .trail-path{fill:none;stroke:var(--trail);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;opacity:.85;}
+.pcchart .hl .trail-dot{fill:var(--trail);stroke:var(--surface);stroke-width:1.2;}
+.pcchart .hl .trail-glow{fill:var(--trail);opacity:.2;}
+.pcchart .hl .trail-now{fill:var(--trail);stroke:var(--surface);stroke-width:2;}
+.pcchart .hl .trail-lab{font-family:var(--font-mono);font-size:10.5px;font-weight:600;fill:var(--trail-ink);paint-order:stroke;stroke:var(--surface);stroke-width:3px;}
+@media (prefers-reduced-motion: reduce){
+.pcchart .pt-g{transition:none;}
+}
+.pcchart .chart-legend{display:flex;flex-direction:column;align-items:flex-start;gap:8px;font-size:12px;color:var(--text-2);font-family:var(--font-mono);}
+.pcchart .chart-legend span{display:inline-flex;align-items:center;gap:8px;line-height:1.4;}
+.pcchart .lg-dot{width:10px;height:10px;border-radius:50%;background:var(--dot);display:inline-block;flex:none;}
+.pcchart .lg-dot.up{background:var(--sig);box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--sig);margin-inline:2px;}
+.pcchart .lg-dia{width:9px;height:9px;background:var(--dn);transform:rotate(45deg);display:inline-block;flex:none;margin-inline:2px;box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--dn);}
+.pcchart .lg-line{width:18px;height:2px;border-radius:2px;background:var(--trail);display:inline-block;flex:none;}
+.pcchart .pick{border:1px dashed var(--border-strong);
+    border-radius:10px;
+    padding:12px 14px;
+    min-height:150px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:7px;
+    font-size:13px;
+    color:var(--text-2);
+    line-height:1.5;}
+.pcchart .pick.on{border:1px solid var(--trail);
+    background:var(--trail-soft);
+    justify-content:flex-start;}
+.pcchart .pick-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.pcchart .pick-head strong{font-size:15px;color:var(--text);}
+.pcchart .pick-tk{font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--trail-ink);}
+.pcchart .pick-sec{color:var(--text-3);font-size:12px;}
+.pcchart .pick-vals{display:flex;flex-wrap:wrap;gap:4px 18px;font-family:var(--font-mono);font-size:12.5px;color:var(--text-2);}
+.pcchart .pick-vals b{font-weight:600;}
+.pcchart .pick-vals b.pos, .pcchart .pick-sub b.pos{color:var(--pos-strong);}
+.pcchart .pick-vals b.neg, .pcchart .pick-sub b.neg{color:var(--neg-strong);}
+.pcchart .pick-path{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--text-2);}
+.pcchart .pick-sub{font-family:var(--font-mono);font-size:11.5px;color:var(--text-3);}
+.pcchart .pick-sig{font-size:12.5px;font-weight:600;}
+.pcchart .pick-sig.up{color:var(--sig-ink);}
+.pcchart .pick-sig.dn{color:var(--dn-ink);}
+.pcchart .qchip{font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:99px;white-space:nowrap;}
+.pcchart .qchip.sm{font-size:11px;padding:1px 8px;}
+.pcchart .qchip.q-tr, .pcchart .pace-tag.q-tr{background:var(--q-tr-soft);color:var(--q-tr);}
+.pcchart .qchip.q-br, .pcchart .pace-tag.q-br{background:var(--q-br-soft);color:var(--q-br);}
+.pcchart .qchip.q-tl, .pcchart .pace-tag.q-tl{background:var(--q-tl-soft);color:var(--q-tl);}
+.pcchart .qchip.q-bl, .pcchart .pace-tag.q-bl{background:var(--q-bl-soft);color:var(--q-bl);}
+.pcchart .pace-tag{display:inline-block;font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:99px;white-space:nowrap;margin-top:3px;}
+.pcchart .pick-read{font-size:12.5px;color:var(--text);font-weight:500;}
+.pcchart .lg-quads{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;}
+.pcchart .lg-quads .qchip{text-align:center;}
+.pcchart .muted{color:var(--text-3);}
+
+@media (min-width: 900px){ .wrap.wide{max-width:1180px} }
 </style>
 </head>
 <body>
@@ -289,6 +416,439 @@ function renderList() {
   document.querySelectorAll('.row, .brief-row b').forEach(c => c.onclick = () => openSheet(c.dataset.t));
 }
 
+const PCChart = (function(){
+const $ = id => document.getElementById(id);
+const QUAD = {
+  tr:{t:'상승 지속', cls:'q-tr'}, tl:{t:'하락 전환', cls:'q-tl'},
+  br:{t:'상승 전환', cls:'q-br'}, bl:{t:'하락 지속', cls:'q-bl'}
+};
+const BAND = 0.5;     // 속도 변화가 ±BAND(%p) 안이면 '속도 유지'
+const paceOf = (x, y) => +(x - y / 3).toFixed(2);          // 속도 변화 = 1M − 3M÷3
+// 1주 전에 상승 쪽(상승 전환·상승 지속)이었다가 지금 하락 지속으로 내려온 종목: 속도 변화(낙폭 둔화 등)보다 이 표시를 우선한다
+const TURN = {'br>bl':'반등 꺾임', 'tr>bl':'상승 꺾임'};
+const SNAP_LABELS = ['3주 전','2주 전','1주 전','현재'];
+const EMPTY_PICK = '<span>점에 마우스를 올리거나 클릭하면 그 종목의 <b>3주 전 → 2주 전 → 1주 전 → 현재</b> 이동 궤적이 주황색으로 표시되고 다른 점은 흐려집니다. 드래그하면 그 영역이 확대됩니다.</span>';
+const SIG_TEXT = {up:'▲ 상승 진입', dn:'▼ 하락 진입'};
+
+const quadOf = (x, y) => (y >= 0 ? 't' : 'b') + (x >= 0 ? 'r' : 'l');
+
+// 사분면 + 속도 변화 → 세부 상태. 상승 지속·하락 지속에서만 속도 변화를 구분한다
+function stateOf(x, y){
+  const q = quadOf(x, y), pace = paceOf(x, y);
+  const k = pace >= BAND ? 'acc' : pace <= -BAND ? 'dec' : 'flat';
+  const arrow = {acc:'↗', flat:'→', dec:'↘'}[k];
+  if(q === 'tr') return {q, k, pace, arrow, name:{acc:'상승 가속', flat:'상승 유지', dec:'상승 둔화'}[k],
+    read:{acc:'상승이 가속 중 — 최근 1개월이 3개월 평균 월 속도보다 빠릅니다.', flat:'상승 속도가 3개월 평균과 비슷합니다.', dec:'아직 오르는 중이지만 최근 1개월 속도가 3개월 평균 월 속도보다 느립니다.'}[k]};
+  if(q === 'bl') return {q, k, pace, arrow, name:{acc:'낙폭 둔화', flat:'하락 유지', dec:'낙폭 확대'}[k],
+    read:{acc:'아직 하락 중이지만 하락 속도가 완만해졌습니다(회복 조짐). 상승 모멘텀은 아닙니다.', flat:'하락 속도가 3개월 평균과 비슷합니다.', dec:'하락 속도가 3개월 평균보다 빨라졌습니다.'}[k]};
+  if(q === 'br') return {q, k, pace, arrow:'', name:'상승 전환', read:'하락하던 흐름이 최근 1개월 반등으로 바뀐 구간입니다. 3개월까지 +가 되면 상승 지속.'};
+  return {q, k, pace, arrow:'', name:'하락 전환', read:'오르던 흐름이 최근 1개월 꺾인 조정 구간입니다. 3개월까지 −가 되면 하락 지속.'};
+}
+
+// 신호: 최근 3주 안에 '전환' 구간을 거쳐 현재 '지속' 구간에 있는 종목
+//  up = 상승 전환(br) → 상승 지속(tr)   |   dn = 하락 전환(tl) → 하락 지속(bl)
+const hasEarly = (p, q) => p.h.slice(0, 3).some(([x, y]) => quadOf(x, y) === q);
+const sigOf = p => {
+  const now = quadOf(p.h[3][0], p.h[3][1]);
+  if(now === 'tr' && hasEarly(p, 'br')) return 'up';
+  if(now === 'bl' && hasEarly(p, 'tl')) return 'dn';
+  return '';
+};
+
+function fmtPp(v){
+  if(Math.abs(v) < 0.05) return '0.0%p';
+  return (v > 0 ? '+' : '') + v.toFixed(1) + '%p';
+}
+function fmtPct(v){
+  if(Math.abs(v) < 0.05) return '0.0%';
+  return (v > 0 ? '+' : '') + v.toFixed(1) + '%';
+}
+function tickStep(range){
+  return range <= 2.5 ? 0.5 : range <= 6 ? 1 : range <= 12 ? 2 : range <= 30 ? 5 : range <= 70 ? 10 : 20;
+}
+function fmtTick(t){
+  const v = Math.abs(t) < 1e-9 ? 0 : t;
+  return (v > 0 ? '+' : '') + (Number.isInteger(v) ? v : v.toFixed(1)) + '%';
+}
+// Catmull-Rom → cubic Bézier: 4개 시점을 부드럽게 잇는 곡선
+function smoothPath(pts){
+  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for(let i = 0; i < pts.length - 1; i++){
+    const p0 = pts[i-1] || pts[i], p1 = pts[i], p2 = pts[i+1], p3 = pts[i+2] || p2;
+    const c1 = [p1[0] + (p2[0]-p0[0])/6, p1[1] + (p2[1]-p0[1])/6];
+    const c2 = [p2[0] - (p3[0]-p1[0])/6, p2[1] - (p3[1]-p1[1])/6];
+    d += ` C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
+/* ---------- 차트 범위 ---------- */
+function fullDomain(list){
+  const xs = [], ys = [];
+  list.forEach(p => p.h.forEach(([x, y]) => { xs.push(x); ys.push(y); }));  // 4개 시점 모두 포함
+  const xMin = Math.min(...xs), xMax = Math.max(...xs), yMin = Math.min(...ys), yMax = Math.max(...ys);
+  const xs_ = tickStep(xMax - xMin), ys_ = tickStep(yMax - yMin);
+  let x0 = Math.floor((xMin - (xMax - xMin) * 0.08) / xs_) * xs_;
+  let x1 = Math.ceil((xMax + (xMax - xMin) * 0.08) / xs_) * xs_;
+  let y0 = Math.floor((yMin - (yMax - yMin) * 0.08) / ys_) * ys_;
+  let y1 = Math.ceil((yMax + (yMax - yMin) * 0.08) / ys_) * ys_;
+  if(x0 > -xs_) x0 = -xs_;
+  if(y0 > -ys_) y0 = -ys_;
+  if(x1 < xs_) x1 = xs_;
+  if(y1 < ys_) y1 = ys_;
+  return {x0, x1, y0, y1};
+}
+
+/* ---------- scatter: 한 번의 그리기 ---------- */
+function paint(svg, list, dom, W, H, uid){
+  const M = {left:54, right:30, top:34, bottom:46};
+  const plotW = W - M.left - M.right, plotH = H - M.top - M.bottom;
+  const {x0, x1, y0, y1} = dom;
+  const sx = v => M.left + (v - x0) / (x1 - x0) * plotW;
+  const sy = v => M.top + plotH - (v - y0) / (y1 - y0) * plotH;
+  const xStep = tickStep(x1 - x0), yStep = tickStep(y1 - y0);
+  const ticks = (min, max, step) => {
+    const out = [];
+    for(let t = Math.ceil(min / step - 1e-9) * step; t <= max + 1e-9; t += step) out.push(Math.round(t * 1000) / 1000);
+    return out;
+  };
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  let s = `<defs><clipPath id="cp-${uid}"><rect x="${M.left}" y="${M.top}" width="${plotW}" height="${plotH}"/></clipPath></defs>`;
+  ticks(x0, x1, xStep).forEach(t => {
+    const x = sx(t);
+    s += `<line class="grid-line" x1="${x}" y1="${M.top}" x2="${x}" y2="${M.top+plotH}"/>`;
+    s += `<text class="axis-label" x="${x}" y="${M.top+plotH+17}" text-anchor="middle">${fmtTick(t)}</text>`;
+  });
+  ticks(y0, y1, yStep).forEach(t => {
+    const y = sy(t);
+    s += `<line class="grid-line" x1="${M.left}" y1="${y}" x2="${M.left+plotW}" y2="${y}"/>`;
+    s += `<text class="axis-label" x="${M.left-8}" y="${y+3.8}" text-anchor="end">${fmtTick(t)}</text>`;
+  });
+  if(x0 < 0 && x1 > 0) s += `<line class="axis-line" x1="${sx(0)}" y1="${M.top}" x2="${sx(0)}" y2="${M.top+plotH}"/>`;
+  if(y0 < 0 && y1 > 0) s += `<line class="axis-line" x1="${M.left}" y1="${sy(0)}" x2="${M.left+plotW}" y2="${sy(0)}"/>`;
+  s += `<rect class="plot-border" x="${M.left}" y="${M.top}" width="${plotW}" height="${plotH}"/>`;
+
+  // 사분면 이름: 해당 사분면이 현재 화면에 걸쳐 있을 때만, 화면 모서리에 표시
+  const padIn = 9;
+  if(x1 > 0 && y1 > 0) s += `<text class="quad-label ${QUAD.tr.cls}" x="${M.left+plotW-padIn}" y="${M.top+17}" text-anchor="end">${QUAD.tr.t}</text>`;
+  if(x0 < 0 && y1 > 0) s += `<text class="quad-label ${QUAD.tl.cls}" x="${M.left+padIn}" y="${M.top+17}" text-anchor="start">${QUAD.tl.t}</text>`;
+  if(x1 > 0 && y0 < 0) s += `<text class="quad-label ${QUAD.br.cls}" x="${M.left+plotW-padIn}" y="${M.top+plotH-9}" text-anchor="end">${QUAD.br.t}</text>`;
+  if(x0 < 0 && y0 < 0) s += `<text class="quad-label ${QUAD.bl.cls}" x="${M.left+padIn}" y="${M.top+plotH-9}" text-anchor="start">${QUAD.bl.t}</text>`;
+  s += `<text class="axis-label" x="${M.left+plotW}" y="${H-7}" text-anchor="end">1개월 수익률 →</text>`;
+  s += `<text class="axis-label" x="${M.left+2}" y="${M.top-13}" text-anchor="start">↑ 3개월 수익률</text>`;
+
+  // 화면 안에 있는 점만 그림 + 라벨끼리 겹치지 않게 배치
+  const visible = list.filter(p => p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1);
+  const placed = [], labelBoxes = {};
+  const cand = [
+    [9,-9,'start'],[9,15,'start'],[-9,-9,'end'],[-9,15,'end'],
+    [0,-15,'middle'],[0,22,'middle'],[15,4,'start'],[-15,4,'end'],
+    [20,-18,'start'],[-20,-18,'end'],[20,24,'start'],[-20,24,'end']
+  ];
+  const overlaps = (bx, arr) => arr.some(o => !(bx.x2 < o.x1 || bx.x1 > o.x2 || bx.y2 < o.y1 || bx.y1 > o.y2));
+  const boxFor = (lx, ly, anchor, w) =>
+    anchor === 'start' ? {x1:lx, x2:lx+w, y1:ly-10, y2:ly+3}
+    : anchor === 'end' ? {x1:lx-w, x2:lx, y1:ly-10, y2:ly+3}
+    : {x1:lx-w/2, x2:lx+w/2, y1:ly-10, y2:ly+3};
+  const inPlot = bx => bx.x1 >= M.left && bx.x2 <= M.left+plotW && bx.y1 >= M.top && bx.y2 <= M.top+plotH+14;
+
+  s += `<g clip-path="url(#cp-${uid})">`;
+  visible.forEach(p => {
+    const px = sx(p.x), py = sy(p.y);
+    const textW = Math.max(p.t.length * 7.4, 24) + 2;
+    let chosen = null;
+    for(const [dx, dy, anchor] of cand){
+      const lx = px + dx, ly = py + dy;
+      const bx = boxFor(lx, ly, anchor, textW);
+      if(inPlot(bx) && !overlaps(bx, placed)){ chosen = {lx, ly, anchor, bx}; break; }
+    }
+    if(!chosen){
+      const [dx, dy, anchor] = cand[0];
+      chosen = {lx: px + dx, ly: py + dy, anchor, bx: boxFor(px + dx, py + dy, anchor, textW)};
+    }
+    placed.push(chosen.bx);
+    labelBoxes[p.t] = chosen.bx;
+
+    const r = p.sig ? 6.4 : 5.2;
+    s += `<g class="pt-g${p.sig ? ' ' + p.sig : ''}" data-t="${p.t}" tabindex="0" role="button" ` +
+         `aria-label="${p.t} ${p.n}, 1개월 ${fmtPct(p.x)}, 3개월 ${fmtPct(p.y)}${p.sig ? ', ' + SIG_TEXT[p.sig] + ' 신호' : ''}">` +
+         `<circle cx="${px}" cy="${py}" r="16" fill="transparent"/>`;
+    if(p.sig) s += `<circle class="sig-ring ${p.sig}" cx="${px}" cy="${py}" r="10.5"/>`;
+    if(p.sig === 'dn'){
+      const d = r * 1.25;
+      s += `<path class="pt dn" d="M${px},${py-d} L${px+d},${py} L${px},${py+d} L${px-d},${py} Z"/>`;
+    } else {
+      s += `<circle class="pt${p.sig ? ' ' + p.sig : ''}" cx="${px}" cy="${py}" r="${r}"/>`;
+    }
+    if(Math.hypot(chosen.lx - px, chosen.ly - py) > 14){
+      s += `<line class="leader" x1="${px}" y1="${py}" x2="${chosen.lx}" y2="${chosen.ly}"/>`;
+    }
+    s += `<text class="pt-label" x="${chosen.lx}" y="${chosen.ly}" text-anchor="${chosen.anchor}">${p.t}</text></g>`;
+  });
+  s += `</g><g class="hl" pointer-events="none" clip-path="url(#cp-${uid})"></g>`;
+  svg.innerHTML = s;
+
+  const hl = svg.querySelector('.hl');
+  const byT = Object.fromEntries(list.map(p => [p.t, p]));
+  // 선택한 종목의 3주 궤적을 주황색으로 그리기
+  function highlight(t){
+    if(!t){ hl.innerHTML = ''; return; }
+    const p = byT[t];
+    const pts = p.h.map(([x, y]) => [sx(x), sy(y)]);
+    let h = `<path class="trail-path" d="${smoothPath(pts)}"/>`;
+    pts.forEach(([x, y], i) => {
+      if(i < 3) h += `<circle class="trail-dot" cx="${x}" cy="${y}" r="${(3.4 + i * 0.8).toFixed(1)}" style="opacity:${(0.5 + i * 0.15).toFixed(2)}"/>`;
+    });
+    const [nx, ny] = pts[3];
+    h += `<circle class="trail-glow" cx="${nx}" cy="${ny}" r="14"/><circle class="trail-now" cx="${nx}" cy="${ny}" r="7"/>`;
+
+    const occupied = [];
+    if(labelBoxes[t]) occupied.push(labelBoxes[t]);
+    pts.forEach(([x, y], i) => { const r = i === 3 ? 11 : 7; occupied.push({x1:x-r, x2:x+r, y1:y-r, y2:y+r}); });
+    const lc = [[0,18,'middle'],[0,-11,'middle'],[11,4,'start'],[-11,4,'end'],[12,19,'start'],[-12,19,'end'],[12,-11,'start'],[-12,-11,'end']];
+    [3, 2, 1, 0].forEach(i => {
+      const [x, y] = pts[i];
+      const w = SNAP_LABELS[i].length * 10 + 4;
+      let pick = null;
+      for(const [dx, dy, anchor] of lc){
+        const bx = boxFor(x + dx, y + dy, anchor, w);
+        if(inPlot(bx) && !overlaps(bx, occupied)){ pick = {lx:x+dx, ly:y+dy, anchor, bx}; break; }
+      }
+      if(!pick){ const [dx, dy, anchor] = lc[0]; pick = {lx:x+dx, ly:y+dy, anchor, bx: boxFor(x+dx, y+dy, anchor, w)}; }
+      occupied.push(pick.bx);
+      h += `<text class="trail-lab" x="${pick.lx}" y="${pick.ly}" text-anchor="${pick.anchor}">${SNAP_LABELS[i]}</text>`;
+    });
+    hl.innerHTML = h;
+  }
+  return {sx, sy, M, plotW, plotH, visible: visible.length, highlight};
+}
+
+/* ---------- board: 표 + 차트 + 상세 카드 + 확대·축소를 하나로 묶음 ---------- */
+function makeBoard({list: all, chartId, pickId, legendId}){
+  all.forEach(p => {
+    if(!p.h){ p.na = true; p.x = p.x1m; p.y = null; p.c = null; p.sig = ''; return; }   // 상장 3개월 미만
+    p.x = p.h[3][0]; p.y = p.h[3][1]; p.c = +(p.x - p.y).toFixed(2); p.sig = sigOf(p);
+    p.pace = paceOf(p.x, p.y); p.st = stateOf(p.x, p.y);
+    p.turn = TURN[quadOf(p.h[2][0], p.h[2][1]) + '>' + p.st.q] || null;
+  });
+  const list = all.filter(p => !p.na), naList = all.filter(p => p.na);
+  const byT = Object.fromEntries(list.map(p => [p.t, p]));
+
+  const host = $(chartId), pick = $(pickId);
+  host.innerHTML =
+    `<div class="chart-wrap"><svg class="chart-svg" role="group" aria-label="1개월·3개월 수익률 사분면 차트"></svg>` +
+    `<div class="zoom-tag"></div>` +
+    `<div class="chart-tools"><button type="button" data-act="in" aria-label="확대" title="확대">＋</button>` +
+    `<button type="button" data-act="out" aria-label="축소" title="축소">－</button>` +
+    `<button type="button" data-act="reset" title="전체 보기">초기화</button></div></div>`;
+  const wrap = host.firstChild, svg = wrap.querySelector('svg'), tag = wrap.querySelector('.zoom-tag');
+  const tools = wrap.querySelector('.chart-tools');
+
+  const nUp = list.filter(p => p.sig === 'up').length, nDn = list.filter(p => p.sig === 'dn').length;
+  $(legendId).innerHTML =
+    `<span class="lg-quads"><span class="qchip sm q-tl">하락 전환</span><span class="qchip sm q-tr">상승 지속</span><span class="qchip sm q-bl">하락 지속</span><span class="qchip sm q-br">상승 전환</span></span>` +
+    `<span><i class="lg-dot"></i>일반</span>` +
+    `<span><i class="lg-dot up"></i>▲ 상승 진입 · ${nUp}개</span>` +
+    `<span><i class="lg-dia"></i>▼ 하락 진입 · ${nDn}개</span>` +
+    `<span><i class="lg-line"></i>선택 시 최근 3주 궤적</span>` +
+    (naList.length ? `<span class="muted">차트 제외: ${naList.map(p => p.t).join('·')} (상장 3개월 미만)</span>` : '');
+
+  const FULL = fullDomain(list);
+  let dom = {...FULL}, W = 640, H = 420, ctx = null;
+  let hover = null, pin = null, drag = null, justDragged = false;
+
+  const isFull = () => ['x0','x1','y0','y1'].every(k => Math.abs(dom[k] - FULL[k]) < 1e-6);
+  function size(){
+    W = Math.max(300, Math.round(host.clientWidth || 640));
+    H = W < 520 ? Math.round(W * 1.05) : Math.round(Math.min(W * 0.6, 680));
+  }
+
+  /* --- 상세 카드 --- */
+  const chip = (k, sm) => `<span class="qchip ${QUAD[k].cls}${sm ? ' sm' : ''}">${QUAD[k].t}</span>`;
+  const sgn = v => v >= 0 ? 'pos' : 'neg';
+  function cardHtml(p){
+    const qs = p.h.map(([x, y]) => quadOf(x, y));
+    const [x0_, y0_] = p.h[0];
+    let note = '';
+    if(p.sig){
+      const from = p.sig === 'up' ? 'br' : 'tl', to = p.sig === 'up' ? 'tr' : 'bl';
+      const when = SNAP_LABELS.filter((_, i) => i < 3 && qs[i] === from).join('·');
+      note = `<div class="pick-sig ${p.sig}">${SIG_TEXT[p.sig]} · ${when}에 ${QUAD[from].t} 구간이었다가 현재 ${QUAD[to].t}에 진입 — ` +
+             `${p.sig === 'up' ? '오르기 시작했을 가능성, 주의 깊게 관찰' : '내리기 시작했을 가능성, 주의 깊게 관찰'}</div>`;
+    }
+    return `<div class="pick-head">${chip(qs[3])}<strong>${p.n}</strong><span class="pick-tk">${p.t}</span><span class="pick-sec">${p.s}</span></div>` +
+      `<div class="pick-vals"><span>1개월 <b class="${sgn(p.x)}">${fmtPct(p.x)}</b></span>` +
+      `<span>3개월 <b class="${sgn(p.y)}">${fmtPct(p.y)}</b></span>` +
+      `<span>Δ <b class="${sgn(p.c)}">${fmtPct(p.c)}</b></span>` +
+      `<span>속도 변화 <b class="${sgn(p.pace)}">${fmtPp(p.pace)}</b></span></div>` +
+      (p.turn
+        ? `<div class="pick-read"><span class="pace-tag q-bl" style="margin:0 6px 0 0">🔻 ${p.turn}</span>1주 전에는 ${QUAD[qs[2]].t} 구간이었는데 이번 주 하락 지속으로 내려왔습니다. ` +
+          `속도 변화(${fmtPp(p.pace)}, ${p.st.name})는 3개월 평균 한 달치보다 덜 빠지고 있다는 뜻일 뿐, 상승이 이어지고 있다는 뜻은 아닙니다.</div>`
+        : `<div class="pick-read"><span class="pace-tag q-${p.st.q}" style="margin:0 6px 0 0">${p.st.arrow ? p.st.arrow + ' ' : ''}${p.st.name}</span>${p.st.read}</div>`) +
+      `<div class="pick-sub">3개월 월평균 ${fmtPct(+(p.y / 3).toFixed(2))} vs 최근 1개월 ${fmtPct(p.x)}</div>` +
+      `<div class="pick-path"><span class="muted">3주 전</span>${chip(qs[0], true)}<span class="muted">→</span><span class="muted">현재</span>${chip(qs[3], true)}` +
+      (qs[0] === qs[3] ? '<span class="muted">사분면 유지</span>' : '') + `</div>` +
+      `<div class="pick-sub">1개월 ${fmtPct(x0_)} → <b class="${sgn(p.x)}">${fmtPct(p.x)}</b> · 3개월 ${fmtPct(y0_)} → <b class="${sgn(p.y)}">${fmtPct(p.y)}</b></div>` + note;
+  }
+
+  function apply(){
+    const t = hover || pin;
+    svg.classList.toggle('has-sel', !!t);
+    svg.querySelectorAll('.pt-g').forEach(g => g.classList.toggle('sel', g.dataset.t === t));
+    if(ctx) ctx.highlight(t);
+    pick.classList.toggle('on', !!t);
+    pick.innerHTML = t ? cardHtml(byT[t]) : EMPTY_PICK;
+  }
+  function draw(){
+    ctx = paint(svg, list, dom, W, H, chartId);
+    const zoomed = !isFull();
+    wrap.classList.toggle('zoomed', zoomed);
+    if(zoomed) tag.textContent = `확대 중 · ${ctx.visible}/${list.length}개 표시`;
+    apply();
+  }
+  const togglePin = t => { pin = (pin === t) ? null : t; apply(); };
+
+  /* --- 표 행 / 점 선택 (이벤트 위임: 다시 그려도 유지) --- */
+  svg.addEventListener('pointerover', e => {
+    if(e.pointerType !== 'mouse' || drag) return;
+    const g = e.target.closest('.pt-g');
+    if(g && g.dataset.t !== hover){ hover = g.dataset.t; apply(); }
+  });
+  svg.addEventListener('pointerout', e => {
+    if(e.pointerType !== 'mouse' || drag) return;
+    const g = e.target.closest('.pt-g');
+    if(!g) return;
+    const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('.pt-g') : null;
+    if(to !== g){ hover = to ? to.dataset.t : null; apply(); }
+  });
+  svg.addEventListener('focusin', e => { const g = e.target.closest('.pt-g'); if(g){ hover = g.dataset.t; apply(); } });
+  svg.addEventListener('focusout', e => {
+    const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('.pt-g') : null;
+    if(!to && hover){ hover = null; apply(); }
+  });
+  svg.addEventListener('click', e => {
+    if(justDragged) return;
+    const g = e.target.closest('.pt-g');
+    if(g) togglePin(g.dataset.t); else { pin = null; apply(); }
+  });
+  svg.addEventListener('keydown', e => {
+    const g = e.target.closest('.pt-g');
+    if(g && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); togglePin(g.dataset.t); }
+  });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && (pin || !isFull())){ pin = null; apply(); } });
+
+  /* --- 확대·축소 --- */
+  const svgPt = e => {
+    const r = svg.getBoundingClientRect();
+    return {x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height)};
+  };
+  const inPlotPt = p => ctx && p.x >= ctx.M.left && p.x <= ctx.M.left + ctx.plotW && p.y >= ctx.M.top && p.y <= ctx.M.top + ctx.plotH;
+  const toData = p => ({
+    x: dom.x0 + (p.x - ctx.M.left) / ctx.plotW * (dom.x1 - dom.x0),
+    y: dom.y1 - (p.y - ctx.M.top) / ctx.plotH * (dom.y1 - dom.y0)
+  });
+  const MIN_RANGE = 0.4;
+  function zoomBy(f, cx, cy){
+    const mx = cx ?? (dom.x0 + dom.x1) / 2, my = cy ?? (dom.y0 + dom.y1) / 2;
+    let n = {x0: mx - (mx - dom.x0) * f, x1: mx + (dom.x1 - mx) * f, y0: my - (my - dom.y0) * f, y1: my + (dom.y1 - my) * f};
+    if(n.x1 - n.x0 >= FULL.x1 - FULL.x0){ n.x0 = FULL.x0; n.x1 = FULL.x1; }
+    if(n.y1 - n.y0 >= FULL.y1 - FULL.y0){ n.y0 = FULL.y0; n.y1 = FULL.y1; }
+    if(n.x1 - n.x0 < MIN_RANGE || n.y1 - n.y0 < MIN_RANGE) return;
+    dom = n; draw();
+  }
+  tools.addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.act === 'reset'){ dom = {...FULL}; draw(); }
+    else zoomBy(b.dataset.act === 'in' ? 0.6 : 1 / 0.6);
+  });
+  svg.addEventListener('dblclick', () => { dom = {...FULL}; draw(); });
+  svg.addEventListener('wheel', e => {
+    if(!(e.ctrlKey || e.metaKey)) return;       // 일반 스크롤은 그대로 페이지 스크롤
+    const p = svgPt(e); if(!inPlotPt(p)) return;
+    e.preventDefault();
+    const d = toData(p);
+    zoomBy(e.deltaY < 0 ? 0.8 : 1.25, d.x, d.y);
+  }, {passive:false});
+
+  svg.addEventListener('pointerdown', e => {
+    if(e.button !== 0 || e.pointerType === 'touch') return;   // 터치는 페이지 스크롤 우선, 버튼으로 확대
+    const p = svgPt(e); if(!inPlotPt(p)) return;
+    drag = {x: p.x, y: p.y, mode: e.shiftKey ? 'pan' : 'zoom', moved: false, id: e.pointerId, start: {...dom}, band: null};
+  });
+  svg.addEventListener('pointermove', e => {
+    if(!drag) return;
+    const p = svgPt(e);
+    if(!drag.moved){
+      if(Math.hypot(p.x - drag.x, p.y - drag.y) < 5) return;
+      drag.moved = true;
+      try{ svg.setPointerCapture(drag.id); }catch(_){}
+      hover = null; apply();
+      if(drag.mode === 'pan') svg.classList.add('panning');
+    }
+    if(drag.mode === 'pan'){
+      const dx = (p.x - drag.x) / ctx.plotW * (drag.start.x1 - drag.start.x0);
+      const dy = (p.y - drag.y) / ctx.plotH * (drag.start.y1 - drag.start.y0);
+      dom = {x0: drag.start.x0 - dx, x1: drag.start.x1 - dx, y0: drag.start.y0 + dy, y1: drag.start.y1 + dy};
+      draw();
+    } else {
+      const {M, plotW, plotH} = ctx;
+      const cl = (v, a, b) => Math.max(a, Math.min(b, v));
+      const ax = cl(Math.min(drag.x, p.x), M.left, M.left + plotW), bx = cl(Math.max(drag.x, p.x), M.left, M.left + plotW);
+      const ay = cl(Math.min(drag.y, p.y), M.top, M.top + plotH), by = cl(Math.max(drag.y, p.y), M.top, M.top + plotH);
+      if(!drag.band){
+        drag.band = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        drag.band.setAttribute('class', 'zoombox');
+        svg.appendChild(drag.band);
+      }
+      drag.band.setAttribute('x', ax); drag.band.setAttribute('y', ay);
+      drag.band.setAttribute('width', bx - ax); drag.band.setAttribute('height', by - ay);
+      drag.rect = {ax, bx, ay, by};
+    }
+  });
+  const endDrag = e => {
+    if(!drag) return;
+    const d = drag; drag = null;
+    svg.classList.remove('panning');
+    if(d.band) d.band.remove();
+    try{ svg.releasePointerCapture(d.id); }catch(_){}
+    if(!d.moved) return;
+    justDragged = true; setTimeout(() => { justDragged = false; }, 0);
+    if(d.mode === 'zoom' && d.rect && d.rect.bx - d.rect.ax > 10 && d.rect.by - d.rect.ay > 10){
+      const a = toData({x: d.rect.ax, y: d.rect.by}), b = toData({x: d.rect.bx, y: d.rect.ay});
+      if(b.x - a.x >= MIN_RANGE && b.y - a.y >= MIN_RANGE){ dom = {x0: a.x, x1: b.x, y0: a.y, y1: b.y}; draw(); }
+    }
+  };
+  svg.addEventListener('pointerup', endDrag);
+  svg.addEventListener('pointercancel', endDrag);
+
+  /* --- 화면 폭에 맞춰 다시 그리기 --- */
+  let lastW = 0;
+  size(); draw(); lastW = host.clientWidth;
+  if('ResizeObserver' in window){
+    new ResizeObserver(() => {
+      const w = Math.round(host.clientWidth);
+      if(Math.abs(w - lastW) < 2) return;
+      lastW = w; size(); draw();
+    }).observe(host);
+  }
+  return {select: t => { pin = t; hover = null; apply(); }, zoom: (a, b, c, d) => { dom = {x0: a, x1: b, y0: c, y1: d}; draw(); }, reset: () => { dom = {...FULL}; draw(); }};
+}
+
+return {makeBoard};
+})();
+
+function renderChartPC() {
+  const list = D.items.map(i => i.h ? {t: i.t, n: i.n, s: i.g, h: i.h} : {t: i.t, n: i.n, s: i.g, h: null, x1m: i.x1m});
+  $('main').innerHTML = `<section class="pcpanel pcchart"><div class="chart-body">
+    <div id="pc-chart"></div>
+    <div class="chart-side"><div class="chart-legend" id="pc-legend"></div><div class="pick" id="pc-pick" aria-live="polite"></div>
+      <p class="chart-hint"><b>드래그</b> 영역 확대<br><b>Shift+드래그</b> 이동<br><b>Ctrl+휠</b> 확대·축소<br><b>더블클릭</b> 또는 초기화 버튼: 전체 보기</p>
+      <p class="chart-caption">우상단 = 상승 지속, 좌상단 = 하락 전환, 우하단 = 상승 전환, 좌하단 = 하락 지속.<br>x = 1개월, y = 3개월 수익률</p></div></div></section>`;
+  PCChart.makeBoard({list, chartId: 'pc-chart', pickId: 'pc-pick', legendId: 'pc-legend'});
+}
+function renderChart() { return window.matchMedia('(min-width: 900px)').matches ? renderChartPC() : renderChartMobile(); }
+
 /* ---------- 차트 ---------- */
 function smooth(pts) {
   if (pts.length < 3) return 'M' + pts.map(p => p.join(',')).join('L');
@@ -354,7 +914,7 @@ function quadSVG(items, opt) {
   return s + '</svg>';
 }
 
-function renderChart() {
+function renderChartMobile() {
   $('main').innerHTML = `<div class="chartbox">
     <div class="legend"><span><i style="background:var(--sig)"></i>▲ 상승 진입</span><span><i style="background:var(--dn);border-radius:2px;transform:rotate(45deg)"></i>▼ 하락 진입</span><span><i style="background:var(--trail)"></i>3주 궤적</span></div>
     ${quadSVG(D.items, {w: 360, h: 420, trails: false})}</div>
@@ -520,11 +1080,13 @@ function renderGuide() {
 /* ---------- 화면 전환 ---------- */
 function render() {
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  document.querySelector('.wrap').classList.toggle('wide', tab === 'chart');
   if (!D) return;
   (tab === 'chart' ? renderChart : tab === 'guide' ? renderGuide : tab === 'watch' ? renderWatch : renderList)();
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.tab; save('tab', tab); closeSheet(); window.scrollTo(0, 0); render(); });
 $('refresh').onclick = load;
+window.matchMedia('(min-width: 900px)').addEventListener('change', () => { if (D && tab === 'chart') render(); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && D) load(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 load();
