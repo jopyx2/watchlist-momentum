@@ -153,7 +153,13 @@ async function load() {
     else { $('main').innerHTML = '<div class="empty">데이터를 불러오지 못했습니다.<br>연결을 확인한 뒤 새로고침하세요.</div>'; }
   }
   $('refresh').disabled = false; $('refresh').textContent = '새로고침';
-  if (D) { $('asof').textContent = `기준 ${D.asof} 종가 · 갱신 ${D.updated}`; render(); }
+  if (D) {
+    $('asof').textContent = `기준 ${D.asof} 종가 · 갱신 ${D.updated}`;
+    // 평일마다 갱신되므로 기준일이 5일 넘게 지났다면 자동 갱신이 멈춘 것이다 (주말·미국 휴장 연휴는 5일 안쪽)
+    const age = Math.floor((Date.now() - Date.parse(D.asof + 'T00:00:00Z')) / 86400000);
+    if (age > 5) $('stale').innerHTML += `<div class="stale">⚠ 데이터가 ${age}일 전 종가 기준입니다. 자동 갱신이 멈췄을 수 있습니다. GitHub 저장소의 Actions 탭을 확인하세요.</div>`;
+    render();
+  }
 }
 
 /* ---------- 목록 ---------- */
