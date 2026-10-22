@@ -180,6 +180,12 @@ nav button.on{color:var(--text);font-weight:700}
 .pcchart .chart-body{align-items:stretch}
 .pcchart .chart-hint b{color:var(--text)}
 .pcpanel{background:var(--surface);border-radius:18px;padding:18px;margin-bottom:10px}
+@media (min-width: 900px){
+  .pcpanel.pcchart .chart-body{grid-template-columns:minmax(0,1fr)}
+  .pcpanel.pcchart .chart-side{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px 20px;align-items:start}
+  .pcpanel.pcchart .chart-side > *{grid-column:2}
+  .pcpanel.pcchart .chart-side .pick{grid-column:1;grid-row:1 / span 4;min-height:0}
+}
 @media (max-width: 899px){
   .pcpanel{padding:10px}
   .pcchart .chart-hint{display:none}
