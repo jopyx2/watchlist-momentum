@@ -182,7 +182,7 @@ function renderList() {
   const ups = plotted.filter(i => i.sig === 'up'), dns = plotted.filter(i => i.sig === 'dn');
   const names = a => a.length ? a.map(i => i.t).join(', ') : '없음';
   let html = `<div class="sumgrid">` + ['tr','br','tl','bl'].map(q => `<div class="sum ${q}"><b>${cnt(q)}</b><span>${QN[q]}</span></div>`).join('') + `</div>`;
-  html += `<div class="signals"><div><b class="up">▲ 상승 시작</b> ${names(ups)}</div><div><b class="dn">▼ 하락 시작</b> ${names(dns)}</div></div>`;
+  html += `<div class="signals"><div><b class="up">▲ 상승 진입</b> ${names(ups)}</div><div><b class="dn">▼ 하락 진입</b> ${names(dns)}</div></div>`;
   const fl = [['all','전체'],['sig','신호'],['up','상승'],['down','하락']];
   html += `<div class="controls">` + fl.map(([k, t]) => `<button class="chip ${filter === k ? 'on' : ''}" data-f="${k}">${t}</button>`).join('') +
     `<select class="chip" id="sort"><option value="pace">정렬: 속도 변화</option><option value="x1">정렬: 1개월</option><option value="x3">정렬: 3개월</option><option value="t">정렬: 티커</option></select></div>`;
@@ -275,7 +275,7 @@ function quadSVG(items, opt) {
 
 function renderChart() {
   $('main').innerHTML = `<div class="chartbox">
-    <div class="legend"><span><i style="background:var(--sig)"></i>▲ 상승 시작</span><span><i style="background:var(--dn);border-radius:2px;transform:rotate(45deg)"></i>▼ 하락 시작</span><span><i style="background:var(--trail)"></i>3주 궤적</span></div>
+    <div class="legend"><span><i style="background:var(--sig)"></i>▲ 상승 진입</span><span><i style="background:var(--dn);border-radius:2px;transform:rotate(45deg)"></i>▼ 하락 진입</span><span><i style="background:var(--trail)"></i>3주 궤적</span></div>
     ${quadSVG(D.items, {w: 360, h: 420, trails: false})}</div>
     <p class="foot" style="margin-top:0">점을 누르면 종목 상세와 3주 궤적이 열립니다. x = 1개월, y = 3개월 수익률</p>` +
     (D.items.some(i => !i.h) ? `<p class="foot">상장 3개월 미만(${D.items.filter(i => !i.h).map(i => i.t).join(', ')})은 차트에서 제외</p>` : '');
@@ -289,7 +289,7 @@ function openSheet(t) {
   if (!i.h) {
     html += `<p style="color:var(--text-2)">상장 3개월 미만이라 3개월 수익률과 궤적이 없습니다.<br>1개월 수익률 <b class="${cls(i.x1m)}">${fp(i.x1m)}</b></p>`;
   } else {
-    html += `<div><span class="qchip ${i.quad}">${QN[i.quad]}</span> ${i.sig === 'up' ? '<b style="color:var(--sig)">▲ 상승 시작</b>' : i.sig === 'dn' ? '<b style="color:var(--dn)">▼ 하락 시작</b>' : ''} <span style="color:var(--text-2);font-size:13px">${stateText(i)}</span></div>
+    html += `<div><span class="qchip ${i.quad}">${QN[i.quad]}</span> ${i.sig === 'up' ? '<b style="color:var(--sig)">▲ 상승 진입</b>' : i.sig === 'dn' ? '<b style="color:var(--dn)">▼ 하락 진입</b>' : ''} <span style="color:var(--text-2);font-size:13px">${stateText(i)}</span></div>
       <div class="kv"><div><small>1개월</small><b class="${cls(i.x1)}">${fp(i.x1)}</b></div><div><small>3개월</small><b class="${cls(i.x3)}">${fp(i.x3)}</b></div><div><small>속도 변화</small><b class="${cls(i.pace)}">${fpp(i.pace)}</b></div></div>
       ${quadSVG([i], {w: 330, h: 230, focus: i.t, trails: true})}
       <table><thead><tr><th>시점</th><th>1개월</th><th>3개월</th><th>위치</th></tr></thead><tbody>` +
@@ -315,8 +315,8 @@ function renderGuide() {
     <p><b>속도 변화 = 1M − 3M÷3</b> (%p)<br>최근 1개월을 '3개월 평균 한 달치'와 비교한 값입니다. ＋면 요즘이 평소보다 빠르고, －면 느립니다.</p>
     <ul><li>↗ +${b}%p 이상 : 상승 가속 · 낙폭 둔화</li><li>→ ±${b}%p 이내 : 상승 유지 · 하락 유지</li><li>↘ −${b}%p 이하 : 상승 둔화 · 낙폭 확대</li></ul></div>
   <div class="read"><h3>③ 신호 — 방향이 바뀐 종목</h3>
-    <ul><li><b style="color:var(--sig)">▲ 상승 시작</b> : 최근 3주 안에 상승 전환 구간을 거쳐 지금 상승 지속</li>
-    <li><b style="color:var(--dn)">▼ 하락 시작</b> : 최근 3주 안에 하락 전환 구간을 거쳐 지금 하락 지속</li>
+    <ul><li><b style="color:var(--sig)">▲ 상승 진입</b> : 최근 3주 안에 상승 전환 구간을 거쳐 지금 상승 지속</li>
+    <li><b style="color:var(--dn)">▼ 하락 진입</b> : 최근 3주 안에 하락 전환 구간을 거쳐 지금 하락 지속</li>
     <li>🔻 <b>반등 꺾임 · 상승 꺾임</b> : 지난주 상승 쪽이었다가 이번 주 하락 지속으로 내려옴. 방향이 나빠진 종목이라 속도 변화보다 이 표시를 우선해서 봅니다.</li></ul>
     <p>목록의 '조정→하락' 같은 표기는 (지난주 → 이번 주) 사분면 이동입니다. 상승 = 상승 지속, 반등 = 상승 전환, 조정 = 하락 전환, 하락 = 하락 지속.</p></div>`;
 }
