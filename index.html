@@ -1082,8 +1082,8 @@ const getToken = () => { try { return localStorage.getItem('ghtoken') || ''; } c
 function wlStatus(t) {
   const it = D && D.items.find(i => i.t === t);
   if (it) return it.h ? ['ok', QN[it.quad]] : ['ok', '상장 3개월 미만'];
-  const inCfg = CFG.watchlist.some(w => w.ticker === t);
-  return inCfg ? ['warn', '시세 없음'] : ['wait', '저장 후 계산'];
+  if (D && (D.missing || []).includes(t)) return ['warn', '시세 없음 · 티커를 확인하세요'];           // 계산은 했는데 시세를 못 받음
+  return ['wait', typeof INLINE !== 'undefined' ? '계산 전 · 바탕화면 아이콘을 다시 실행하세요' : '계산 중 · 몇 분 뒤 새로고침하세요'];   // 아직 계산하지 않음
 }
 
 

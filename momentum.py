@@ -183,8 +183,10 @@ def build_app_data(res: dict) -> dict:
         else:
             rec.update(h=None, x1m=it["pts"][3][0])       # 상장 3개월 미만: 목록에만 표시
         items.append(rec)
+    shown = {r["t"] for r in items}
+    missing = [it["ticker"] for it in res["items"] if it["ticker"] not in shown]      # 시세가 없거나 상장 1개월 미만: 앱이 '계산 중'과 구분해 보여준다
     return {"asof": f"{res['T']}", "snaps": [f"{d}" for d in res["snaps"]],
-            "updated": f"{kst:%Y-%m-%d %H:%M} KST", "band": PACE_BAND, "quad_names": QUAD_NAME, "items": items}
+            "updated": f"{kst:%Y-%m-%d %H:%M} KST", "band": PACE_BAND, "quad_names": QUAD_NAME, "items": items, "missing": missing}
 
 
 def export_app(data: dict, path: Path) -> None:
