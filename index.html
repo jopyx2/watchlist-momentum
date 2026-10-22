@@ -139,11 +139,21 @@ nav button.on{color:var(--text);font-weight:700}
 .wl-del:active{background:var(--surface-2);color:var(--bl)}
 .wl-del svg{width:20px;height:20px}
 .st.wl-ok{color:var(--text-3)} .st.wl-warn{color:var(--tl)} .st.wl-wait{color:var(--br)}
-.wl-conn{background:var(--surface);border-radius:18px;padding:14px 16px;margin-top:18px;font-size:13px;color:var(--text-2)}
-.wl-conn summary{font-weight:700;color:var(--text);font-size:14px}
-.wl-conn p{margin:10px 0 6px}
-.wl-conn a{color:var(--br)}
-.wl-link{display:block;margin-top:10px;font:inherit;font-size:12.5px;color:var(--text-3);background:none;border:0;padding:0;text-decoration:underline}
+.wl-conn{background:var(--surface);border-radius:18px;padding:16px;margin:0 0 14px;font-size:14px;color:var(--text-2)}
+.wl-conn h3{margin:0 0 6px;font-size:16px;color:var(--text)}
+.wl-conn p{margin:0 0 10px;line-height:1.55}
+.wl-conn.ok{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;background:var(--tr-bg);color:var(--tr);padding:12px 16px;font-size:13px;margin-top:18px}
+.wl-conn.ok b{font-size:14px}
+.wl-conn.ok span{margin-right:auto}
+.wl-steps{margin:0;padding:0;list-style:none;counter-reset:s;display:grid;gap:14px}
+.wl-steps li{counter-increment:s;position:relative;padding-left:34px;display:grid;gap:6px;justify-items:start}
+.wl-steps li::before{content:counter(s);position:absolute;left:0;top:-1px;width:24px;height:24px;border-radius:50%;background:var(--text);color:var(--bg);font-weight:700;font-size:13px;display:grid;place-items:center}
+.wl-steps li > b{color:var(--text);font-size:14.5px}
+.wl-steps small{font-size:12.5px;line-height:1.55;color:var(--text-2)}
+.wl-steps .wl-form{width:100%}
+.wl-big{display:inline-block;font:inherit;font-size:15px;font-weight:700;border:0;border-radius:12px;padding:12px 18px;background:var(--text);color:var(--bg);text-decoration:none;text-align:center}
+.wl-big:active{opacity:.85}
+.wl-conn.ok .wl-link{margin-top:0}
 .wl-msg{border-radius:14px;padding:11px 14px;font-size:13px;margin-top:14px}
 .wl-msg.ok{background:var(--tr-bg);color:var(--tr)} .wl-msg.bad{background:var(--bl-bg);color:var(--bl)}
 .wl-bar{position:sticky;bottom:calc(78px + env(safe-area-inset-bottom));margin-top:16px;background:var(--text);color:var(--bg);border-radius:16px;padding:8px 8px 8px 16px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.28)}
@@ -1073,12 +1083,52 @@ function wlStatus(t) {
   return inCfg ? ['warn', '시세 없음'] : ['wait', '저장 후 계산'];
 }
 
+
+const TOKEN_URL = 'https://github.com/settings/personal-access-tokens/new?name=' + encodeURIComponent('관심종목 앱') +
+  '&description=' + encodeURIComponent('관심종목 앱에서 종목 목록을 저장하기 위한 토큰') + '&expires_in=365&contents=write&actions=write';
+
+function connCard(tok) {
+  if (tok) return `<div class="wl-conn ok"><b>✓ GitHub 연결됨</b><span>종목을 바꾼 뒤 아래 “저장하고 반영”만 누르면 됩니다.</span><button type="button" class="wl-link" id="wl-tokdel">연결 끊기</button></div>`;
+  return `<section class="wl-conn" id="wl-conn"><h3>처음 한 번만 연결하면 돼요</h3>
+    <p>종목을 바꿔서 저장하려면, 내 GitHub 계정이 “이 앱이 저장해도 좋다”는 <b>열쇠</b>(토큰)를 줘야 해요. 한 번만 만들어 두면 다음부터는 종목만 바꾸면 됩니다. 열쇠는 이 기기에만 저장돼요.</p>
+    <ol class="wl-steps">
+      <li><b>열쇠 만드는 화면 열기</b>
+        <a class="wl-big" href="${TOKEN_URL}" target="_blank" rel="noopener">GitHub 열기 ↗</a>
+        <small>이메일 인증이 나오면 먼저 인증하세요. 열린 화면에서는 <b>Repository access</b>를 “Only select repositories”로 두고 <b>watchlist-momentum</b>을 고른 다음, 맨 아래 <b>Generate token</b>을 누르세요. 이름·기간·권한은 미리 채워져 있어요. 비어 있으면 Contents와 Actions를 “Read and write”로 바꿔 주세요.</small></li>
+      <li><b>만들어진 열쇠 복사하기</b>
+        <small><b>github_pat_</b>로 시작하는 긴 글자가 나오면 옆의 복사 버튼을 누르세요. 이 글자는 그때 한 번만 보여줘요.</small></li>
+      <li><b>이 앱으로 돌아와서 붙여넣기</b>
+        <button type="button" class="wl-big" id="wl-paste">복사한 열쇠 붙여넣기</button>
+        <small>버튼이 안 되면 아래 칸을 길게 눌러 붙여넣고 “연결”을 누르세요.</small>
+        <div class="wl-form" style="margin-top:8px"><input id="wl-tok" type="password" placeholder="여기에 붙여넣기" autocomplete="off" aria-label="GitHub 토큰">
+          <button type="button" id="wl-toksave">연결</button></div></li>
+    </ol></section>`;
+}
+
+/* 붙여넣은 열쇠가 맞는지 GitHub에 물어본 뒤에만 저장한다 */
+async function connectToken(raw) {
+  const v = (raw || '').trim();
+  if (!/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(v)) {
+    wlMsg = ['bad', '열쇠 모양이 아니에요. github_pat_ 로 시작하는 긴 글자를 복사했는지 확인해 주세요.']; renderWatch(); return;
+  }
+  wlMsg = ['ok', '확인하는 중…']; renderWatch();
+  try {
+    const r = await fetch(`https://api.github.com/repos/${REPO}`, {headers: {Authorization: 'Bearer ' + v, Accept: 'application/vnd.github+json'}});
+    if (r.status === 401) throw new Error('열쇠가 맞지 않아요. 다시 복사해서 붙여넣어 주세요.');
+    if (!r.ok) throw new Error('GitHub에서 확인하지 못했어요 (' + r.status + '). 잠시 뒤 다시 해 보세요.');
+    const d = await r.json();
+    if (d.permissions && d.permissions.push === false) throw new Error('이 열쇠는 보기만 할 수 있어요. 만들 때 Contents와 Actions를 “Read and write”로 골라 주세요.');
+  } catch (e) { wlMsg = ['bad', e.message || '네트워크를 확인해 주세요.']; renderWatch(); return; }
+  try { localStorage.setItem('ghtoken', v); } catch (e) {}
+  wlMsg = ['ok', '연결됐어요. 이제 종목을 바꾸고 “저장하고 반영”을 누르면 돼요.']; renderWatch();
+}
+
 async function renderWatch() {
   $('main').innerHTML = '<div class="empty">불러오는 중…</div>';
   await loadCfg();
   if (!CFG) { $('main').innerHTML = '<div class="empty">관심종목 설정을 불러오지 못했습니다.<br>연결을 확인한 뒤 새로고침하세요.</div>'; return; }
   const dirty = wlDirty(), tok = getToken();
-  let html = `<section class="wl-add"><h2 class="grp" style="margin-top:4px"><i style="background:var(--text-3)"></i>종목 추가</h2>
+  let html = (wlMsg ? `<div class="wl-msg ${wlMsg[0]}" role="status">${wlMsg[1]}</div>` : '') + connCard(tok) + `<section class="wl-add"><h2 class="grp" style="margin-top:4px"><i style="background:var(--text-3)"></i>종목 추가</h2>
     <form id="wl-form" class="wl-form" autocomplete="off">
       <input id="wl-t" placeholder="티커" maxlength="8" autocapitalize="characters" spellcheck="false" aria-label="티커 (예: MSFT)">
       <input id="wl-n" placeholder="이름 (선택)" maxlength="20" aria-label="이름 (예: 마이크로소프트)">
@@ -1090,12 +1140,6 @@ async function renderWatch() {
       return `<div class="wl-row"><div class="id"><span class="tk">${w.ticker}</span><span class="nm">${w.name}</span><div class="st wl-${k}">${label}</div></div>
         <button class="wl-del" data-del="${w.ticker}" aria-label="${w.ticker} 삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
     }).join('') : '<div class="empty">관심종목이 없습니다. 위에서 티커를 추가하세요.</div>') + `</div>`;
-  html += `<details class="wl-conn"${tok ? '' : ' open'}><summary>${tok ? 'GitHub 연결됨' : 'GitHub 연결 필요'}</summary>
-    <p>저장하려면 이 폰에서 GitHub에 쓸 수 있는 토큰이 한 번 필요합니다. 이 저장소(${REPO}) 하나에만 <b>Contents</b>와 <b>Actions</b> 쓰기 권한을 준 토큰을 만들어 붙여넣으세요. 토큰은 이 폰의 브라우저에만 저장됩니다.</p>
-    <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">토큰 만드는 곳 열기</a>
-    <div class="wl-form" style="margin-top:10px"><input id="wl-tok" type="password" placeholder="${tok ? '저장된 토큰이 있습니다' : '토큰 붙여넣기'}" autocomplete="off" aria-label="GitHub 토큰">
-      <button type="button" id="wl-toksave">${tok ? '바꾸기' : '저장'}</button></div>${tok ? '<button type="button" class="wl-link" id="wl-tokdel">토큰 지우기</button>' : ''}</details>`;
-  if (wlMsg) html += `<div class="wl-msg ${wlMsg[0]}" role="status">${wlMsg[1]}</div>`;
   if (dirty) html += `<div class="wl-bar"><span>변경 ${wlChanges()}건</span><button type="button" id="wl-undo">되돌리기</button><button type="button" id="wl-save" ${wlBusy ? 'disabled' : ''}>${wlBusy ? '저장 중…' : '저장하고 반영'}</button></div>`;
   $('main').innerHTML = html;
   wireWatch();
@@ -1120,8 +1164,12 @@ function wireWatch() {
   document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { WL = WL.filter(w => w.ticker !== b.dataset.del); wlMsg = null; renderWatch(); });
   if ($('wl-undo')) $('wl-undo').onclick = () => { WL = CFG.watchlist.map(w => ({ticker: w.ticker, name: w.name || w.ticker})); wlMsg = null; renderWatch(); };
   if ($('wl-save')) $('wl-save').onclick = pushWatchlist;
-  $('wl-toksave').onclick = () => { const v = $('wl-tok').value.trim(); if (!v) return; try { localStorage.setItem('ghtoken', v); } catch (e) {} wlMsg = ['ok', '토큰을 저장했습니다.']; renderWatch(); };
-  if ($('wl-tokdel')) $('wl-tokdel').onclick = () => { try { localStorage.removeItem('ghtoken'); } catch (e) {} wlMsg = ['ok', '토큰을 지웠습니다.']; renderWatch(); };
+  if ($('wl-toksave')) $('wl-toksave').onclick = () => connectToken($('wl-tok').value);
+  if ($('wl-paste')) $('wl-paste').onclick = async () => {
+    try { connectToken(await navigator.clipboard.readText()); }
+    catch (e) { wlMsg = ['bad', '자동 붙여넣기가 막혀 있어요. 아래 칸을 길게 눌러 붙여넣고 “연결”을 눌러 주세요.']; renderWatch(); setTimeout(() => { const i = $('wl-tok'); if (i) i.focus(); }, 60); }
+  };
+  if ($('wl-tokdel')) $('wl-tokdel').onclick = () => { try { localStorage.removeItem('ghtoken'); } catch (e) {} wlMsg = ['ok', '연결을 끊었어요.']; renderWatch(); };
 }
 
 /* config.json 을 원래 모양(종목 한 줄씩)으로 다시 쓴다 */
@@ -1138,7 +1186,7 @@ const b64dec = s => { const b = atob(s.replace(/\s/g, '')); return new TextDecod
 
 async function pushWatchlist() {
   const tok = getToken();
-  if (!tok) { wlMsg = ['bad', '먼저 아래 "GitHub 연결"에 토큰을 저장하세요.']; renderWatch(); return; }
+  if (!tok) { wlMsg = ['bad', '저장하려면 먼저 위의 “처음 한 번만 연결하면 돼요”를 끝내 주세요.']; await renderWatch(); window.scrollTo(0, 0); return; }
   wlBusy = true; renderWatch();
   const api = `https://api.github.com/repos/${REPO}`;
   const H = {Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'};
