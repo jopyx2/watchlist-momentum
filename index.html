@@ -4,110 +4,162 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>관심종목 모멘텀</title>
-<meta name="theme-color" content="#f4f5f8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#14161c" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f1f3f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1218" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
 :root{
-  --bg:#f4f5f8; --surface:#fff; --surface-2:#eef0f5; --line:#e1e4ec;
-  --text:#1a1c26; --text-2:#555c70; --text-3:#8a90a3;
-  --tr:#0a7a43; --br:#2b6fd6; --tl:#d9730a; --bl:#b3261e;
-  --tr-bg:#e3f4ea; --br-bg:#e3edfb; --tl-bg:#fdeedd; --bl-bg:#fbe5e3;
-  --sig:#8e3bd8; --dn:#c98400; --trail:#f26a0f; --dot:#7a849b;
-  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --bg:#f1f3f7; --surface:#ffffff; --surface-2:#e9edf3; --line:#dde2ea;
+  --text:#141923; --text-2:#4d586a; --text-3:#8491a3;
+  --tr:#0b8a55; --br:#2f6fe0; --tl:#d4780f; --bl:#cc3b32;
+  --tr-bg:#e1f3ea; --br-bg:#e2ecfc; --tl-bg:#fcecd8; --bl-bg:#fbe3e0;
+  --sig:#7b3fd1; --dn:#b57600; --trail:#f26a0f; --dot:#7a849b;
+  --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
 }
 @media (prefers-color-scheme: dark){
   :root{
-    --bg:#14161c; --surface:#1e212a; --surface-2:#272b36; --line:#2f3441;
-    --text:#eceef4; --text-2:#a9afc0; --text-3:#7c8296;
-    --tr:#3fcf85; --br:#6aa3ff; --tl:#ffa04d; --bl:#ff7a70;
-    --tr-bg:#16352a; --br-bg:#182b4a; --tl-bg:#3d2a14; --bl-bg:#40201d;
-    --sig:#b784f0; --dn:#e6ad2e; --dot:#8a93aa;
+    --bg:#0e1218; --surface:#161b24; --surface-2:#1f2631; --line:#262e3b;
+    --text:#e9edf4; --text-2:#a2adbf; --text-3:#6f7b8e;
+    --tr:#52c98f; --br:#6fa8ff; --tl:#f4a65c; --bl:#f27d74;
+    --tr-bg:#15342a; --br-bg:#182a47; --tl-bg:#3a2a16; --bl-bg:#3c211f;
+    --sig:#c4a2ff; --dn:#e9b13a; --dot:#8a93aa;
   }
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.4}
-body{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
-.wrap{max-width:560px;margin:0 auto;padding:0 16px}
-header{padding:calc(14px + env(safe-area-inset-top)) 0 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-h1{margin:0;font-size:20px;font-weight:700;letter-spacing:-.3px}
-.sub{color:var(--text-3);font-size:12px;margin-top:2px}
-.refresh{white-space:nowrap;flex:none;border:1px solid var(--line);background:var(--surface);color:var(--text-2);border-radius:10px;padding:8px 12px;font:inherit;font-size:13px}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.4;font-feature-settings:"tnum" 1;-webkit-font-smoothing:antialiased}
+body{padding-bottom:calc(68px + env(safe-area-inset-bottom))}
+.wrap{max-width:560px;margin:0 auto;padding:0 18px}
+
+header{padding:calc(16px + env(safe-area-inset-top)) 0 14px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{margin:0;font-size:13px;font-weight:600;color:var(--text-3);letter-spacing:0}
+.asof{font-size:26px;font-weight:700;letter-spacing:-.8px;line-height:1.15;margin-top:2px}
+.asof small{font-size:13px;font-weight:500;color:var(--text-3);letter-spacing:0;margin-left:6px}
+.sub{color:var(--text-3);font-size:12px;margin-top:3px}
+.refresh{flex:none;width:40px;height:40px;border:1px solid var(--line);background:var(--surface);color:var(--text-2);border-radius:50%;display:grid;place-items:center;padding:0}
 .refresh:active{background:var(--surface-2)}
-.stale{background:var(--tl-bg);color:var(--tl);border-radius:10px;padding:8px 12px;font-size:12.5px;margin-bottom:10px}
+.refresh svg{width:19px;height:19px}
+.refresh[disabled] svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.refresh[disabled] svg{animation:none}}
+.stale{background:var(--tl-bg);color:var(--tl);border-radius:12px;padding:9px 12px;font-size:12.5px;margin-bottom:10px}
 
-.sumgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px 0 12px}
-.sum{border-radius:12px;padding:9px 6px;text-align:center}
-.sum b{display:block;font-size:20px;line-height:1.1}
-.sum span{font-size:11px}
-.sum.tr{background:var(--tr-bg);color:var(--tr)} .sum.br{background:var(--br-bg);color:var(--br)}
-.sum.tl{background:var(--tl-bg);color:var(--tl)} .sum.bl{background:var(--bl-bg);color:var(--bl)}
-.signals{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:12px;display:grid;gap:4px}
-.signals b.up{color:var(--sig)} .signals b.dn{color:var(--dn)}
+/* 이번 주 변화 */
+.brief{background:var(--surface);border-radius:18px;padding:14px 16px 16px;margin-bottom:6px}
+.brief-row{display:grid;grid-template-columns:84px 1fr;column-gap:10px;align-items:baseline;padding:5px 0;font-size:14px}
+.brief-row + .brief-row{border-top:1px solid var(--line)}
+.brief-row .k{font-weight:700}
+.brief-row.up .k{color:var(--sig)} .brief-row.dn .k{color:var(--dn)} .brief-row.turn .k{color:var(--bl)}
+.brief-row .v{color:var(--text);display:flex;flex-wrap:wrap;gap:4px 12px}
+.brief-row .v b{font-weight:700;cursor:pointer}
+.brief-row .v small{font-size:11.5px;font-weight:500;color:var(--text-3);margin-left:4px}
+.brief-row .none{color:var(--text-3)}
+.brief-row .cap{grid-column:1/3;font-size:11.5px;color:var(--text-3);margin-top:1px}
+.cap .q{font-style:normal;font-weight:600}
+.cap .q.tr{color:var(--tr)} .cap .q.br{color:var(--br)} .cap .q.tl{color:var(--tl)} .cap .q.bl{color:var(--bl)}
+.dist{display:flex;gap:3px;height:8px;margin-top:14px}
+.dist i{display:block;border-radius:4px;min-width:6px}
+.dist-cap{display:flex;justify-content:space-between;font-size:12px;color:var(--text-3);margin-top:7px}
 
-.controls{display:flex;gap:8px;align-items:center;margin-bottom:10px;overflow-x:auto;scrollbar-width:none}
-.controls::-webkit-scrollbar{display:none}
-.chip{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--text-2);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px}
-.chip.on{background:var(--text);color:var(--bg);border-color:var(--text)}
-select.chip{appearance:none;-webkit-appearance:none;padding-right:12px}
-
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;width:100%;text-align:left;color:inherit;font:inherit}
-.card:active{background:var(--surface-2)}
-.tk{font-weight:700;font-size:16px}
-.nm{color:var(--text-2);font-size:13px;margin-left:6px}
-.mark{font-size:12px;margin-left:4px}
+/* 그룹과 종목 줄 */
+.grp{display:flex;align-items:center;gap:8px;margin:22px 0 4px;padding:0 14px 0 4px;font-size:14px;font-weight:700}
+.grp i{width:8px;height:8px;border-radius:50%}
+.grp span{color:var(--text-3);font-weight:500}
+/* 열 제목은 아래 숫자 칸(62px 두 칸, 사이 12px)과 같은 오른쪽 선에 맞춘다 */
+.grp em{margin-left:auto;font-style:normal;font-size:11.5px;font-weight:500;color:var(--text-3);display:flex;gap:12px}
+.grp em b{display:block;width:62px;text-align:right;font-weight:500}
+.rows{background:var(--surface);border-radius:18px;overflow:hidden}
+.row{display:grid;grid-template-columns:44px 1fr 62px 62px;align-items:center;gap:0 12px;width:100%;padding:11px 14px 11px 12px;border:0;border-top:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:left}
+.row:first-child{border-top:0}
+.row:active{background:var(--surface-2)}
+.row:focus-visible{outline:2px solid var(--text-2);outline-offset:-2px}
+.gl{display:block;width:44px;height:44px}
+.id{min-width:0}
+.tk{font-weight:700;font-size:16px;letter-spacing:-.2px}
+.nm{color:var(--text-3);font-size:12.5px;margin-left:6px;font-weight:500}
+.mark{font-size:11px;margin-left:5px}
 .mark.up{color:var(--sig)} .mark.dn{color:var(--dn)}
+.st{font-size:12.5px;color:var(--text-2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st.bad{color:var(--bl)}
+.n{text-align:right;font-size:16px;font-weight:600;letter-spacing:-.3px}
+.pos{color:var(--tr)} .neg{color:var(--bl)}
+.empty{text-align:center;color:var(--text-3);padding:36px 0}
 .qchip{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600}
 .qchip.tr{background:var(--tr-bg);color:var(--tr)} .qchip.br{background:var(--br-bg);color:var(--br)}
 .qchip.tl{background:var(--tl-bg);color:var(--tl)} .qchip.bl{background:var(--bl-bg);color:var(--bl)}
 .qchip.na{background:var(--surface-2);color:var(--text-3)}
-.nums{display:flex;gap:14px;font-size:13px;color:var(--text-2);grid-column:1/3}
-.nums span b{font-weight:600}
-.pos{color:var(--tr)} .neg{color:var(--bl)}
-.pace{font-size:12.5px;color:var(--text-2);text-align:right}
-.empty{text-align:center;color:var(--text-3);padding:36px 0}
 
-.chartbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px;margin-bottom:10px}
+.chartbox{background:var(--surface);border-radius:18px;padding:10px;margin-bottom:10px}
 svg{display:block;width:100%;height:auto;touch-action:manipulation}
 svg text{font-family:var(--font)}
-.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--text-2);padding:2px 4px 8px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--text-2);padding:4px 6px 8px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 .pt{cursor:pointer}
 
-.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+.sheet-bg{position:fixed;inset:0;background:rgba(5,8,12,.55);opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
 .sheet-bg.open{opacity:1;pointer-events:auto}
-.sheet{position:fixed;left:0;right:0;bottom:0;max-height:88vh;overflow:auto;background:var(--surface);border-radius:20px 20px 0 0;padding:8px 16px calc(24px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .25s;z-index:21;max-width:560px;margin:0 auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-height:88vh;overflow:auto;background:var(--surface);border-radius:24px 24px 0 0;padding:8px 18px calc(26px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .25s;z-index:21;max-width:560px;margin:0 auto}
 .sheet.open{transform:none}
-.grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 12px}
-.sheet h2{margin:0 0 4px;font-size:19px}
-.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
-.kv div{background:var(--surface-2);border-radius:10px;padding:8px 6px;text-align:center}
+@media (prefers-reduced-motion: reduce){.sheet,.sheet-bg{transition:none}}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 14px}
+.sheet h2{margin:0 0 6px;font-size:20px;letter-spacing:-.4px}
+.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.kv div{background:var(--surface-2);border-radius:14px;padding:10px 6px;text-align:center}
 .kv small{display:block;font-size:11px;color:var(--text-3)}
-.kv b{font-size:16px}
+.kv b{font-size:18px;letter-spacing:-.3px}
 table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
 th{color:var(--text-3);font-weight:500;text-align:right;padding:4px 0}
 th:first-child,td:first-child{text-align:left}
-td{padding:7px 0;border-top:1px solid var(--line);text-align:right}
-.read{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;font-size:14px}
+td{padding:8px 0;border-top:1px solid var(--line);text-align:right}
+.read{background:var(--surface);border-radius:18px;padding:16px;margin-bottom:10px;font-size:14px}
 .read h3{margin:0 0 8px;font-size:15px}
 .read p{margin:6px 0;color:var(--text-2)}
 .read ul{margin:6px 0;padding-left:0;list-style:none}
-.read li{margin:7px 0;color:var(--text-2)}
-.foot{color:var(--text-3);font-size:11.5px;text-align:center;margin:14px 0}
+.read li{margin:8px 0;color:var(--text-2)}
+.foot{color:var(--text-3);font-size:11.5px;text-align:center;margin:18px 0}
 
-nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:10}
-nav button{flex:1;border:0;background:none;color:var(--text-3);font:inherit;font-size:12px;padding:9px 0 8px}
-nav button b{display:block;font-size:19px;font-weight:400;line-height:1.2}
-nav button.on{color:var(--text);font-weight:600}
+nav{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:10}
+nav button{flex:1;border:0;background:none;color:var(--text-3);font:inherit;font-size:11.5px;padding:9px 0 8px;display:grid;justify-items:center;gap:3px}
+nav button svg{width:23px;height:23px}
+nav button.on{color:var(--text);font-weight:700}
+
+/* 관심종목 편집 */
+.wl-form{display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px}
+.wl-form input{min-width:0;font:inherit;font-size:15px;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+.wl-form input:focus{outline:2px solid var(--text-3);outline-offset:-1px}
+.wl-form button,.wl-bar button{font:inherit;font-size:14px;font-weight:700;border:0;border-radius:12px;padding:0 16px;background:var(--text);color:var(--bg)}
+.wl-form button:disabled,.wl-bar button:disabled{opacity:.5}
+.wl-hint{font-size:12px;color:var(--text-3);margin:7px 2px 0}
+.wl-hint.bad{color:var(--bl)}
+.wl-row{display:grid;grid-template-columns:1fr 44px;align-items:center;padding:10px 6px 10px 16px;border-top:1px solid var(--line)}
+.wl-row:first-child{border-top:0}
+.wl-del{width:44px;height:44px;border:0;background:none;color:var(--text-3);display:grid;place-items:center;border-radius:12px}
+.wl-del:active{background:var(--surface-2);color:var(--bl)}
+.wl-del svg{width:20px;height:20px}
+.st.wl-ok{color:var(--text-3)} .st.wl-warn{color:var(--tl)} .st.wl-wait{color:var(--br)}
+.wl-conn{background:var(--surface);border-radius:18px;padding:14px 16px;margin-top:18px;font-size:13px;color:var(--text-2)}
+.wl-conn summary{font-weight:700;color:var(--text);font-size:14px}
+.wl-conn p{margin:10px 0 6px}
+.wl-conn a{color:var(--br)}
+.wl-link{display:block;margin-top:10px;font:inherit;font-size:12.5px;color:var(--text-3);background:none;border:0;padding:0;text-decoration:underline}
+.wl-msg{border-radius:14px;padding:11px 14px;font-size:13px;margin-top:14px}
+.wl-msg.ok{background:var(--tr-bg);color:var(--tr)} .wl-msg.bad{background:var(--bl-bg);color:var(--bl)}
+.wl-bar{position:sticky;bottom:calc(78px + env(safe-area-inset-bottom));margin-top:16px;background:var(--text);color:var(--bg);border-radius:16px;padding:8px 8px 8px 16px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+.wl-bar span{margin-right:auto}
+.wl-bar button{height:40px}
+.wl-bar button#wl-undo{background:none;color:var(--bg);opacity:.75}
+.wl-bar button#wl-save{background:var(--bg);color:var(--text)}
+
+.cap b{color:var(--text);font-weight:800}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div><h1>관심종목 모멘텀</h1><div class="sub" id="asof">불러오는 중…</div></div>
-    <button class="refresh" id="refresh">새로고침</button>
+    <div><h1>관심종목 모멘텀</h1><div class="asof" id="asof">&nbsp;</div><div class="sub" id="upd"></div></div>
+    <button class="refresh" id="refresh" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
   </header>
   <div id="stale"></div>
   <main id="main"></main>
@@ -118,9 +170,10 @@ nav button.on{color:var(--text);font-weight:600}
 <div class="sheet" id="sheet"></div>
 
 <nav>
-  <button data-tab="list" class="on"><b>☰</b>목록</button>
-  <button data-tab="chart"><b>◎</b>차트</button>
-  <button data-tab="guide"><b>ⓘ</b>읽는 법</button>
+  <button data-tab="list" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-6 4 3 7-9"/><path d="M4 21h16"/></svg>모멘텀</button>
+  <button data-tab="chart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/><circle cx="17" cy="7" r="2"/><circle cx="7" cy="16" r="2"/></svg>차트</button>
+  <button data-tab="watch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>관심종목</button>
+  <button data-tab="guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>읽는 법</button>
 </nav>
 
 <script>
@@ -140,7 +193,7 @@ const save = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 
 /* ---------- 데이터 ---------- */
 async function load() {
-  $('refresh').disabled = true; $('refresh').textContent = '불러오는 중';
+  $('refresh').disabled = true;
   try {
     const r = await fetch('data.json?_=' + Date.now(), {cache: 'no-store'});
     if (!r.ok) throw new Error(r.status);
@@ -152,9 +205,9 @@ async function load() {
     if (c) { D = c; $('stale').innerHTML = '<div class="stale">네트워크에 연결할 수 없어 마지막으로 저장된 데이터를 보여줍니다.</div>'; }
     else { $('main').innerHTML = '<div class="empty">데이터를 불러오지 못했습니다.<br>연결을 확인한 뒤 새로고침하세요.</div>'; }
   }
-  $('refresh').disabled = false; $('refresh').textContent = '새로고침';
+  $('refresh').disabled = false;
   if (D) {
-    $('asof').textContent = `기준 ${D.asof} 종가 · 갱신 ${D.updated}`;
+    $('asof').innerHTML = `${+D.asof.slice(5, 7)}월 ${+D.asof.slice(8)}일<small>종가 기준</small>`; $('upd').textContent = `갱신 ${D.updated}`;
     // 평일마다 갱신되므로 기준일이 5일 넘게 지났다면 자동 갱신이 멈춘 것이다 (주말·미국 휴장 연휴는 5일 안쪽)
     const age = Math.floor((Date.now() - Date.parse(D.asof + 'T00:00:00Z')) / 86400000);
     if (age > 5) $('stale').innerHTML += `<div class="stale">⚠ 데이터가 ${age}일 전 종가 기준입니다. 자동 갱신이 멈췄을 수 있습니다. GitHub 저장소의 Actions 탭을 확인하세요.</div>`;
@@ -163,12 +216,7 @@ async function load() {
 }
 
 /* ---------- 목록 ---------- */
-const sorters = {
-  pace: (a, b) => b.pace - a.pace,
-  x1: (a, b) => b.x1 - a.x1,
-  x3: (a, b) => b.x3 - a.x3,
-  t: (a, b) => a.t.localeCompare(b.t),
-};
+const GROUPS = ['tr', 'br', 'tl', 'bl'];      // 좋은 쪽에서 나쁜 쪽으로
 
 function stateText(it) {
   if (it.turn) return `🔻 ${it.turn}`;
@@ -176,36 +224,56 @@ function stateText(it) {
   return '';
 }
 
-function renderList() {
-  const all = D.items, plotted = all.filter(i => i.h), short = all.filter(i => !i.h);
-  const cnt = q => plotted.filter(i => i.quad === q).length;
-  const ups = plotted.filter(i => i.sig === 'up'), dns = plotted.filter(i => i.sig === 'dn');
-  const names = a => a.length ? a.map(i => i.t).join(', ') : '없음';
-  let html = `<div class="sumgrid">` + ['tr','br','tl','bl'].map(q => `<div class="sum ${q}"><b>${cnt(q)}</b><span>${QN[q]}</span></div>`).join('') + `</div>`;
-  html += `<div class="signals"><div><b class="up">▲ 상승 진입</b> ${names(ups)}</div><div><b class="dn">▼ 하락 진입</b> ${names(dns)}</div></div>`;
-  const fl = [['all','전체'],['sig','신호'],['up','상승'],['down','하락']];
-  html += `<div class="controls">` + fl.map(([k, t]) => `<button class="chip ${filter === k ? 'on' : ''}" data-f="${k}">${t}</button>`).join('') +
-    `<select class="chip" id="sort"><option value="pace">정렬: 속도 변화</option><option value="x1">정렬: 1개월</option><option value="x3">정렬: 3개월</option><option value="t">정렬: 티커</option></select></div>`;
-  let list = plotted.filter(i => filter === 'all' ? true : filter === 'sig' ? !!i.sig : filter === 'up' ? (i.quad === 'tr' || i.quad === 'br') : (i.quad === 'bl' || i.quad === 'tl'));
-  list.sort(sorters[sortKey]);
-  if (filter === 'all') list = list.concat(short);
-  html += list.length ? list.map(card).join('') : '<div class="empty">해당하는 종목이 없습니다.</div>';
-  $('main').innerHTML = html;
-  $('sort').value = sortKey;
-  $('sort').onchange = e => { sortKey = e.target.value; save('sort', sortKey); renderList(); };
-  document.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { filter = b.dataset.f; save('filter', filter); renderList(); });
-  document.querySelectorAll('.card').forEach(c => c.onclick = () => openSheet(c.dataset.t));
+/* 3주 궤적을 한 칸짜리 사분면에 그린 작은 그림: 현재 사분면이 옅게 칠해지고, 점은 지금 위치 */
+function glyph(it) {
+  const S = 44, c = S / 2, pts = it.h;
+  const m = Math.max(2, ...pts.flat().map(Math.abs)) * 1.15;
+  const X = v => c + v / m * (c - 5), Y = v => c - v / m * (c - 5);
+  const tp = pts.map(p => [+X(p[0]).toFixed(1), +Y(p[1]).toFixed(1)]);
+  const q = {tr: [c, 0], tl: [0, 0], br: [c, c], bl: [0, c]}[it.quad];
+  const last = tp[3];
+  return `<svg class="gl" viewBox="0 0 ${S} ${S}" aria-hidden="true">
+    <clipPath id="g-${it.t.replace(/\W/g, '')}"><rect width="${S}" height="${S}" rx="12"/></clipPath>
+    <rect width="${S}" height="${S}" rx="12" fill="var(--surface-2)"/>
+    <rect x="${q[0]}" y="${q[1]}" width="${c}" height="${c}" fill="var(--${it.quad})" opacity=".2" clip-path="url(#g-${it.t.replace(/\W/g, '')})"/>
+    <path d="M${c} 3V${S - 3}M3 ${c}H${S - 3}" stroke="var(--line)" stroke-width="1"/>
+    <path d="${smooth(tp)}" fill="none" stroke="var(--trail)" stroke-width="1.8" stroke-linecap="round" opacity=".9"/>
+    <circle cx="${last[0]}" cy="${last[1]}" r="3.4" fill="var(--${it.quad})" stroke="var(--surface)" stroke-width="1.2"/></svg>`;
 }
 
-function card(it) {
+function row(it) {
   const mark = it.sig === 'up' ? '<span class="mark up">▲</span>' : it.sig === 'dn' ? '<span class="mark dn">▼</span>' : '';
-  if (!it.h) return `<button class="card" data-t="${it.t}"><div><span class="tk">${it.t}</span><span class="nm">${it.n}</span></div><span class="qchip na">상장 3개월 미만</span><div class="nums"><span>1개월 <b class="${cls(it.x1m)}">${fp(it.x1m)}</b></span></div></button>`;
+  if (!it.h) return `<button class="row" data-t="${it.t}"><svg class="gl" viewBox="0 0 44 44"><rect width="44" height="44" rx="12" fill="var(--surface-2)"/></svg>
+    <div class="id"><span class="tk">${it.t}</span><span class="nm">${it.n}</span><div class="st">상장 3개월 미만</div></div>
+    <span class="n ${cls(it.x1m)}">${fp(it.x1m)}</span><span class="n" style="color:var(--text-3)">—</span></button>`;
   const flow = it.prev && it.prev !== it.quad ? `${QSHORT[it.prev]}→${QSHORT[it.quad]}` : '';
-  return `<button class="card" data-t="${it.t}">
-    <div><span class="tk">${it.t}</span><span class="nm">${it.n}</span>${mark}</div>
-    <span class="qchip ${it.quad}">${QN[it.quad]}</span>
-    <div class="nums"><span>1개월 <b class="${cls(it.x1)}">${fp(it.x1)}</b></span><span>3개월 <b class="${cls(it.x3)}">${fp(it.x3)}</b></span><span class="pace" style="margin-left:auto">${[flow, stateText(it)].filter(Boolean).join(' · ')}</span></div>
-  </button>`;
+  const st = stateText(it) || flow;      // 이동 경로는 왼쪽 그림이 보여주므로, 상승·하락 지속 줄에는 상태만 쓴다
+  return `<button class="row" data-t="${it.t}">${glyph(it)}
+    <div class="id"><span class="tk">${it.t}</span><span class="nm">${it.n}</span>${mark}<div class="st ${it.turn ? 'bad' : ''}">${st || '&nbsp;'}</div></div>
+    <span class="n ${cls(it.x1)}">${fp(it.x1)}</span><span class="n ${cls(it.x3)}">${fp(it.x3)}</span></button>`;
+}
+
+function renderList() {
+  const all = D.items, plotted = all.filter(i => i.h), short = all.filter(i => !i.h);
+  const by = q => plotted.filter(i => i.quad === q).sort((a, b) => b.pace - a.pace);
+  const ups = plotted.filter(i => i.sig === 'up'), dns = plotted.filter(i => i.sig === 'dn'), turns = plotted.filter(i => i.turn);
+  const chips = (a, tag) => a.length ? a.map(i => `<span><b data-t="${i.t}">${i.t}</b>${tag ? `<small>${i.turn}</small>` : ''}</span>`).join('') : '<span class="none">없음</span>';
+  const q = k => `<em class="q ${k}">${QN[k]}</em>`;
+  const n = k => by(k).length;
+  // 신호 이름(상승 진입·하락 진입·꺾임)은 그대로 두고, 아래 그룹 이름과 같은 말로 풀어 쓴다
+  let html = `<section class="brief" aria-label="이번 주 변화">
+    <div class="brief-row up"><span class="k">▲ 상승 진입</span><span class="v">${chips(ups)}</span><div class="cap"><b>3주</b> 안에 ${q('br')} → 지금 ${q('tr')}</div></div>
+    <div class="brief-row dn"><span class="k">▼ 하락 진입</span><span class="v">${chips(dns)}</span><div class="cap"><b>3주</b> 안에 ${q('tl')} → 지금 ${q('bl')}</div></div>
+    <div class="brief-row turn"><span class="k">🔻 꺾임</span><span class="v">${chips(turns, true)}</span><div class="cap">지난주 ${q('br')}·${q('tr')} → 이번 주 ${q('bl')}</div></div>
+    <div class="dist" role="img" aria-label="사분면별 종목 수">${GROUPS.filter(q => n(q)).map(q => `<i style="flex:${n(q)};background:var(--${q})"></i>`).join('')}</div>
+    <div class="dist-cap"><span>상승 쪽 ${n('tr') + n('br')}</span><span>하락 쪽 ${n('tl') + n('bl')}</span></div></section>`;
+  GROUPS.forEach(q => {
+    const g = by(q); if (!g.length) return;
+    html += `<h2 class="grp"><i style="background:var(--${q})"></i>${QN[q]} <span>${g.length}</span><em><b>1개월</b><b>3개월</b></em></h2><div class="rows">${g.map(row).join('')}</div>`;
+  });
+  if (short.length) html += `<h2 class="grp"><i style="background:var(--text-3)"></i>상장 3개월 미만 <span>${short.length}</span></h2><div class="rows">${short.map(row).join('')}</div>`;
+  $('main').innerHTML = html;
+  document.querySelectorAll('.row, .brief-row b').forEach(c => c.onclick = () => openSheet(c.dataset.t));
 }
 
 /* ---------- 차트 ---------- */
@@ -301,6 +369,121 @@ function openSheet(t) {
 const closeSheet = () => { $('sheet').classList.remove('open'); $('bg').classList.remove('open'); };
 $('bg').onclick = closeSheet;
 
+/* ---------- 관심종목 편집 ---------- */
+const REPO = 'jopyx2/watchlist-momentum';
+let CFG = null, WL = null, wlMsg = null, wlBusy = false;
+
+async function loadCfg() {
+  if (CFG) return;
+  try {
+    const r = await fetch('config.json?_=' + Date.now(), {cache: 'no-store'});
+    if (!r.ok) throw new Error(r.status);
+    CFG = await r.json();
+  } catch (e) {
+    if (typeof INLINE_CFG !== 'undefined') CFG = JSON.parse(JSON.stringify(INLINE_CFG));
+  }
+  if (CFG) WL = CFG.watchlist.map(w => ({ticker: w.ticker, name: w.name || w.ticker}));
+}
+
+const wlDirty = () => !!CFG && JSON.stringify(WL) !== JSON.stringify(CFG.watchlist.map(w => ({ticker: w.ticker, name: w.name || w.ticker})));
+const getToken = () => { try { return localStorage.getItem('ghtoken') || ''; } catch (e) { return ''; } };
+
+function wlStatus(t) {
+  const it = D && D.items.find(i => i.t === t);
+  if (it) return it.h ? ['ok', QN[it.quad]] : ['ok', '상장 3개월 미만'];
+  const inCfg = CFG.watchlist.some(w => w.ticker === t);
+  return inCfg ? ['warn', '시세 없음'] : ['wait', '저장 후 계산'];
+}
+
+async function renderWatch() {
+  $('main').innerHTML = '<div class="empty">불러오는 중…</div>';
+  await loadCfg();
+  if (!CFG) { $('main').innerHTML = '<div class="empty">관심종목 설정을 불러오지 못했습니다.<br>연결을 확인한 뒤 새로고침하세요.</div>'; return; }
+  const dirty = wlDirty(), tok = getToken();
+  let html = `<section class="wl-add"><h2 class="grp" style="margin-top:4px"><i style="background:var(--text-3)"></i>종목 추가</h2>
+    <form id="wl-form" class="wl-form" autocomplete="off">
+      <input id="wl-t" placeholder="티커" maxlength="8" autocapitalize="characters" spellcheck="false" aria-label="티커 (예: MSFT)">
+      <input id="wl-n" placeholder="이름 (선택)" maxlength="20" aria-label="이름 (예: 마이크로소프트)">
+      <button type="submit">추가</button></form>
+    <div class="wl-hint" id="wl-hint">미국 종목 티커만 입력하세요 (예: MSFT, BRK.B). 존재하지 않는 티커는 저장 뒤 "시세 없음"으로 표시됩니다.</div></section>`;
+  html += `<h2 class="grp"><i style="background:var(--text-3)"></i>현재 관심종목 <span>${WL.length}</span></h2><div class="rows">` +
+    (WL.length ? WL.map(w => {
+      const [k, label] = wlStatus(w.ticker);
+      return `<div class="wl-row"><div class="id"><span class="tk">${w.ticker}</span><span class="nm">${w.name}</span><div class="st wl-${k}">${label}</div></div>
+        <button class="wl-del" data-del="${w.ticker}" aria-label="${w.ticker} 삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
+    }).join('') : '<div class="empty">관심종목이 없습니다. 위에서 티커를 추가하세요.</div>') + `</div>`;
+  html += `<details class="wl-conn"${tok ? '' : ' open'}><summary>${tok ? 'GitHub 연결됨' : 'GitHub 연결 필요'}</summary>
+    <p>저장하려면 이 폰에서 GitHub에 쓸 수 있는 토큰이 한 번 필요합니다. 이 저장소(${REPO}) 하나에만 <b>Contents</b>와 <b>Actions</b> 쓰기 권한을 준 토큰을 만들어 붙여넣으세요. 토큰은 이 폰의 브라우저에만 저장됩니다.</p>
+    <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">토큰 만드는 곳 열기</a>
+    <div class="wl-form" style="margin-top:10px"><input id="wl-tok" type="password" placeholder="${tok ? '저장된 토큰이 있습니다' : '토큰 붙여넣기'}" autocomplete="off" aria-label="GitHub 토큰">
+      <button type="button" id="wl-toksave">${tok ? '바꾸기' : '저장'}</button></div>${tok ? '<button type="button" class="wl-link" id="wl-tokdel">토큰 지우기</button>' : ''}</details>`;
+  if (wlMsg) html += `<div class="wl-msg ${wlMsg[0]}" role="status">${wlMsg[1]}</div>`;
+  if (dirty) html += `<div class="wl-bar"><span>변경 ${wlChanges()}건</span><button type="button" id="wl-undo">되돌리기</button><button type="button" id="wl-save" ${wlBusy ? 'disabled' : ''}>${wlBusy ? '저장 중…' : '저장하고 반영'}</button></div>`;
+  $('main').innerHTML = html;
+  wireWatch();
+}
+
+function wlChanges() {
+  const a = new Set(CFG.watchlist.map(w => w.ticker)), b = new Set(WL.map(w => w.ticker));
+  let n = 0; a.forEach(t => { if (!b.has(t)) n++; }); b.forEach(t => { if (!a.has(t)) n++; });
+  const names = new Map(CFG.watchlist.map(w => [w.ticker, w.name || w.ticker]));
+  WL.forEach(w => { if (names.has(w.ticker) && names.get(w.ticker) !== w.name) n++; });
+  return n;
+}
+
+function wireWatch() {
+  $('wl-form').onsubmit = e => {
+    e.preventDefault();
+    const t = $('wl-t').value.trim().toUpperCase(), n = $('wl-n').value.trim() || t;
+    if (!/^[A-Z]{1,5}([.-][A-Z])?$/.test(t)) { $('wl-hint').textContent = '티커 형식이 맞지 않습니다. 영문 1~5자(예: MSFT, BRK.B)로 입력하세요.'; $('wl-hint').className = 'wl-hint bad'; return; }
+    if (WL.some(w => w.ticker === t)) { $('wl-hint').textContent = `${t}는 이미 관심종목에 있습니다.`; $('wl-hint').className = 'wl-hint bad'; return; }
+    WL.push({ticker: t, name: n}); wlMsg = null; renderWatch();
+  };
+  document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { WL = WL.filter(w => w.ticker !== b.dataset.del); wlMsg = null; renderWatch(); });
+  if ($('wl-undo')) $('wl-undo').onclick = () => { WL = CFG.watchlist.map(w => ({ticker: w.ticker, name: w.name || w.ticker})); wlMsg = null; renderWatch(); };
+  if ($('wl-save')) $('wl-save').onclick = pushWatchlist;
+  $('wl-toksave').onclick = () => { const v = $('wl-tok').value.trim(); if (!v) return; try { localStorage.setItem('ghtoken', v); } catch (e) {} wlMsg = ['ok', '토큰을 저장했습니다.']; renderWatch(); };
+  if ($('wl-tokdel')) $('wl-tokdel').onclick = () => { try { localStorage.removeItem('ghtoken'); } catch (e) {} wlMsg = ['ok', '토큰을 지웠습니다.']; renderWatch(); };
+}
+
+/* config.json 을 원래 모양(종목 한 줄씩)으로 다시 쓴다 */
+function serializeCfg(cfg) {
+  const lines = Object.keys(cfg).map(k => {
+    if (k !== 'watchlist') return `  ${JSON.stringify(k)}: ${JSON.stringify(cfg[k])}`;
+    const rows = cfg.watchlist.map(w => `    {"ticker": ${JSON.stringify(w.ticker)}, "name": ${JSON.stringify(w.name)}}`);
+    return `  "watchlist": [\n${rows.join(',\n')}\n  ]`;
+  });
+  return `{\n${lines.join(',\n')}\n}\n`;
+}
+const b64enc = s => { const u = new TextEncoder().encode(s); let b = ''; u.forEach(c => b += String.fromCharCode(c)); return btoa(b); };
+const b64dec = s => { const b = atob(s.replace(/\s/g, '')); return new TextDecoder().decode(Uint8Array.from(b, c => c.charCodeAt(0))); };
+
+async function pushWatchlist() {
+  const tok = getToken();
+  if (!tok) { wlMsg = ['bad', '먼저 아래 "GitHub 연결"에 토큰을 저장하세요.']; renderWatch(); return; }
+  wlBusy = true; renderWatch();
+  const api = `https://api.github.com/repos/${REPO}`;
+  const H = {Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'};
+  try {
+    const cur = await fetch(`${api}/contents/config.json?ref=main`, {headers: H});
+    if (cur.status === 401 || cur.status === 403 || cur.status === 404) throw new Error('토큰이 없거나 권한이 부족합니다. 이 저장소의 Contents·Actions 쓰기 권한을 확인하세요.');
+    if (!cur.ok) throw new Error('설정 파일을 읽지 못했습니다 (' + cur.status + ').');
+    const curJ = await cur.json();
+    const cfg = JSON.parse(b64dec(curJ.content));
+    cfg.watchlist = WL.map(w => ({ticker: w.ticker, name: w.name}));
+    const put = await fetch(`${api}/contents/config.json`, {method: 'PUT', headers: H,
+      body: JSON.stringify({message: `관심종목 변경 ${WL.length}개 (앱)`, content: b64enc(serializeCfg(cfg)), sha: curJ.sha, branch: 'main'})});
+    if (!put.ok) throw new Error('저장하지 못했습니다 (' + put.status + '). 토큰의 Contents 쓰기 권한을 확인하세요.');
+    CFG = cfg;
+    const run = await fetch(`${api}/actions/workflows/update.yml/dispatches`, {method: 'POST', headers: H, body: JSON.stringify({ref: 'main'})});
+    wlMsg = run.ok ? ['ok', '저장했습니다. 새 종목의 계산에 2~3분 걸립니다. 잠시 뒤 새로고침하세요.']
+                   : ['bad', '목록은 저장했지만 계산을 시작하지 못했습니다. 토큰에 Actions 쓰기 권한이 있어야 합니다. 다음 평일 아침 자동 갱신 때 반영됩니다.'];
+  } catch (e) {
+    wlMsg = ['bad', e.message || '저장하지 못했습니다. 네트워크를 확인하세요.'];
+  }
+  wlBusy = false; renderWatch();
+}
+
 /* ---------- 읽는 법 ---------- */
 function renderGuide() {
   const b = D.band;
@@ -325,7 +508,7 @@ function renderGuide() {
 function render() {
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   if (!D) return;
-  (tab === 'chart' ? renderChart : tab === 'guide' ? renderGuide : renderList)();
+  (tab === 'chart' ? renderChart : tab === 'guide' ? renderGuide : tab === 'watch' ? renderWatch : renderList)();
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.tab; save('tab', tab); closeSheet(); window.scrollTo(0, 0); render(); });
 $('refresh').onclick = load;
