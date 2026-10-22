@@ -1,6 +1,6 @@
 name: update-watchlist-data
 
-# 미국 장 마감 후(평일 22:30 UTC = 한국 다음 날 07:30) docs/data.json 을 갱신한다. 앱(docs/)은 GitHub Pages 로 서비스된다.
+# 미국 장 마감 후(평일 22:30 UTC = 한국 다음 날 07:30) data.json 을 갱신한다. 앱(index.html)은 GitHub Pages 로 서비스된다.
 on:
   schedule:
     - cron: "30 22 * * 1-5"
@@ -25,5 +25,5 @@ jobs:
         run: |
           git config user.name "watchlist-bot"
           git config user.email "watchlist-bot@users.noreply.github.com"
-          git add docs/data.json
+          git add data.json
           git diff --cached --quiet && echo "변경 없음" || (git commit -m "데이터 갱신 $(date -u +%F)" && git push)

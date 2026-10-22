@@ -16,6 +16,6 @@
 
 스마트폰 앱 (PWA)
 -----------------
-docs\ 폴더가 스마트폰 앱입니다 (index.html + data.json). GitHub Pages 로 올리면 안드로이드 크롬에서
+index.html·data.json·manifest.webmanifest·sw.js·icon-*.png 가 스마트폰 앱입니다. GitHub Pages 로 올리면 안드로이드 크롬에서
 "홈 화면에 추가/앱 설치"로 아이콘을 만들 수 있고, GitHub Actions(.github\workflows\update.yml)가
-평일 한국시간 07:30 에 data.json 을 자동 갱신합니다. PC 에서 실행.bat 을 돌려도 docs\data.json 이 같이 갱신됩니다.
+평일 한국시간 07:30 에 data.json 을 자동 갱신합니다. PC 에서 실행.bat 을 돌려도 data.json 이 같이 갱신됩니다.

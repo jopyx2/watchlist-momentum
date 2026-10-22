@@ -204,7 +204,7 @@ def render_page(res: dict, cfg: dict) -> str:
 
 # --------------------------------------------------------------------------- 스마트폰 앱용 데이터
 def export_app(res: dict, cfg: dict, path: Path) -> None:
-    """docs/data.json: 스마트폰 앱(PWA)이 읽는 계산 결과. 판정 로직은 이 파일에만 두고 앱은 보여주기만 한다."""
+    """data.json: 스마트폰 앱(PWA)이 읽는 계산 결과. 판정 로직은 이 파일에만 두고 앱은 보여주기만 한다."""
     kst = dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=9)
     items = []
     for it in res["items"]:
@@ -273,7 +273,7 @@ def run(args) -> int:
     latest.write_text(page_path.read_text(encoding="utf-8"), encoding="utf-8")
 
     if not args.asof:                   # 과거 기준일 재계산은 앱 데이터를 덮어쓰지 않는다
-        export_app(res, cfg, HERE / "docs" / "data.json")
+        export_app(res, cfg, HERE / "data.json")
 
     if args.dump_json:
         slim = [{k: v for k, v in i.items() if k in ("kind", "ticker", "pts", "plotted", "sig", "x1", "x3", "c", "quad", "pace")} for i in res["items"]]
