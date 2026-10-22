@@ -180,14 +180,24 @@ nav button.on{color:var(--text);font-weight:700}
 .pcchart .chart-body{align-items:stretch}
 .pcchart .chart-hint b{color:var(--text)}
 .pcpanel{background:var(--surface);border-radius:18px;padding:18px;margin-bottom:10px}
+.pcchart .chart-touch{display:none}
 @media (min-width: 900px){
   .pcpanel.pcchart .chart-body{grid-template-columns:minmax(0,1fr)}
+  .pcpanel.pcchart .chart-side .pick .pick-sub{display:none}
+  .pcpanel.pcchart .lg-quads, .pcpanel.pcchart .chart-caption{display:none}
+  .pcpanel.pcchart .chart-legend{flex-direction:row;flex-wrap:wrap;gap:6px 16px}
+  .pcpanel.pcchart .chart-hint b{margin-right:3px}
   .pcpanel.pcchart .chart-side{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px 20px;align-items:start}
   .pcpanel.pcchart .chart-side > *{grid-column:2}
   .pcpanel.pcchart .chart-side .pick{grid-column:1;grid-row:1 / span 4;min-height:0}
 }
 @media (max-width: 899px){
   .pcpanel{padding:10px}
+  .pcchart .chart-svg{touch-action:none}
+  .pcchart .chart-tools button[data-act=in], .pcchart .chart-tools button[data-act=out]{display:none}
+  .pcchart .chart-tools button[data-act=reset]{display:none}
+  .pcchart .chart-wrap.zoomed .chart-tools button[data-act=reset]{display:inline-block}
+  .pcchart .chart-touch{display:block;font-size:11.5px;color:var(--text-3);margin:0}
   .pcchart .chart-hint{display:none}
   .pcchart .chart-side{gap:10px}
   .pcchart .chart-side .pick{order:-1;min-height:0}
@@ -307,7 +317,7 @@ nav button.on{color:var(--text);font-weight:700}
 .pcchart .lg-quads .qchip{text-align:center;}
 .pcchart .muted{color:var(--text-3);}
 
-@media (min-width: 900px){ .wrap.wide{max-width:1180px} }
+@media (min-width: 900px){ .wrap.wide{max-width:1180px} .wrap.wide header{padding:10px 0 8px} .wrap.wide .asof{font-size:20px} .wrap.wide .sub{display:none} .wrap.wide .foot{display:none} .wrap.wide .pcpanel{margin-bottom:0} }
 </style>
 </head>
 <body>
@@ -676,7 +686,12 @@ function makeBoard({list: all, chartId, pickId, legendId}){
   const isFull = () => ['x0','x1','y0','y1'].every(k => Math.abs(dom[k] - FULL[k]) < 1e-6);
   function size(){
     W = Math.max(300, Math.round(host.clientWidth || 640));
-    H = W < 520 ? Math.round(W * 1.05) : Math.round(Math.min(W * 0.6, 680));
+    if(W < 520) H = Math.round(W * 1.05);
+    else if(window.matchMedia('(min-width: 900px)').matches){
+      // PC: 스크롤 없이 한 화면에 들어오게 — 창 높이에서 위쪽 여백과 아래 카드·탭 자리를 뺀 만큼만 쓴다
+      const top = host.getBoundingClientRect().top + window.scrollY;
+      H = Math.max(300, Math.min(Math.round(W * 0.6), 680, Math.round(window.innerHeight - top - 285)));
+    } else H = Math.round(Math.min(W * 0.6, 680));
   }
 
   /* --- 상세 카드 --- */
@@ -837,6 +852,79 @@ function makeBoard({list: all, chartId, pickId, legendId}){
   svg.addEventListener('pointerup', endDrag);
   svg.addEventListener('pointercancel', endDrag);
 
+
+  /* --- 터치: 두 손가락으로 확대·축소, 확대한 뒤에는 한 손가락으로 이동, 두 번 누르면 전체 보기 --- */
+  (function(){
+    const tp = new Map();                      // 눌려 있는 손가락 (pointerId → svg 좌표)
+    let pinch = null, pan = null, lastTap = null;
+    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const mid = (a, b) => ({x: (a.x + b.x) / 2, y: (a.y + b.y) / 2});
+    const quiet = () => { justDragged = true; setTimeout(() => { justDragged = false; }, 350); };   // 제스처 직후의 클릭은 점 선택으로 치지 않음
+    const clampDom = d => {                    // 전체 범위 밖으로 나가지 않게
+      const rx = Math.min(d.x1 - d.x0, FULL.x1 - FULL.x0), ry = Math.min(d.y1 - d.y0, FULL.y1 - FULL.y0);
+      let x0 = d.x0, y0 = d.y0;
+      if(x0 < FULL.x0) x0 = FULL.x0; if(x0 + rx > FULL.x1) x0 = FULL.x1 - rx;
+      if(y0 < FULL.y0) y0 = FULL.y0; if(y0 + ry > FULL.y1) y0 = FULL.y1 - ry;
+      return {x0, x1: x0 + rx, y0, y1: y0 + ry};
+    };
+    svg.addEventListener('pointerdown', e => {
+      if(e.pointerType !== 'touch') return;
+      try{ svg.setPointerCapture(e.pointerId); }catch(_){}
+      tp.set(e.pointerId, svgPt(e));
+      if(tp.size === 2){
+        const [a, b] = [...tp.values()];
+        pinch = {d0: Math.max(dist(a, b), 1), mid0: mid(a, b), dom0: {...dom}};
+        pan = null; hover = null; quiet();
+      } else if(tp.size === 1){
+        pan = {start: svgPt(e), dom0: {...dom}, moved: false, t: Date.now()};
+      }
+    });
+    svg.addEventListener('pointermove', e => {
+      if(e.pointerType !== 'touch' || !tp.has(e.pointerId) || !ctx) return;
+      tp.set(e.pointerId, svgPt(e));
+      if(pinch && tp.size >= 2){
+        const [a, b] = [...tp.values()];
+        const m = mid(a, b), d = Math.max(dist(a, b), 1);
+        const rx0 = pinch.dom0.x1 - pinch.dom0.x0, ry0 = pinch.dom0.y1 - pinch.dom0.y0;
+        const k = pinch.d0 / d;                                   // 손가락을 벌리면 k < 1 (범위가 줄어 확대)
+        let rx = rx0 * k, ry = ry0 * k;
+        if(rx >= FULL.x1 - FULL.x0 || ry >= FULL.y1 - FULL.y0){ dom = {...FULL}; draw(); quiet(); return; }
+        if(rx < MIN_RANGE || ry < MIN_RANGE) return;
+        const {M, plotW, plotH} = ctx;
+        const px = pinch.dom0.x0 + (pinch.mid0.x - M.left) / plotW * rx0;       // 처음 두 손가락 가운데에 있던 데이터 위치
+        const py = pinch.dom0.y1 - (pinch.mid0.y - M.top) / plotH * ry0;
+        const x0 = px - (m.x - M.left) / plotW * rx, y1 = py + (m.y - M.top) / plotH * ry;
+        dom = clampDom({x0, x1: x0 + rx, y0: y1 - ry, y1}); draw(); quiet();
+      } else if(pan && tp.size === 1 && !isFull()){
+        const p = svgPt(e);
+        if(!pan.moved && Math.hypot(p.x - pan.start.x, p.y - pan.start.y) < 6) return;
+        pan.moved = true; hover = null; quiet();
+        const {plotW, plotH} = ctx;
+        const dx = (p.x - pan.start.x) / plotW * (pan.dom0.x1 - pan.dom0.x0);
+        const dy = (p.y - pan.start.y) / plotH * (pan.dom0.y1 - pan.dom0.y0);
+        dom = clampDom({x0: pan.dom0.x0 - dx, x1: pan.dom0.x1 - dx, y0: pan.dom0.y0 + dy, y1: pan.dom0.y1 + dy}); draw();
+      }
+    });
+    const up = e => {
+      if(e.pointerType !== 'touch') return;
+      const wasPinch = !!pinch, moved = pan && pan.moved;
+      tp.delete(e.pointerId);
+      try{ svg.releasePointerCapture(e.pointerId); }catch(_){}
+      if(tp.size < 2) pinch = null;
+      if(tp.size === 1){ const [only] = [...tp.values()]; pan = {start: only, dom0: {...dom}, moved: true, t: Date.now()}; }
+      else if(tp.size === 0){
+        pan = null;
+        if(!wasPinch && !moved && e.type === 'pointerup'){                // 손가락을 떼면서 두 번 눌렀는지 확인
+          const now = Date.now(), p = svgPt(e);
+          if(lastTap && now - lastTap.t < 320 && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < 24 && !isFull()){ dom = {...FULL}; draw(); quiet(); lastTap = null; }
+          else lastTap = {t: now, x: p.x, y: p.y};
+        }
+      }
+    };
+    svg.addEventListener('pointerup', up);
+    svg.addEventListener('pointercancel', up);
+  })();
+
   /* --- 화면 폭에 맞춰 다시 그리기 --- */
   let lastW = 0;
   size(); draw(); lastW = host.clientWidth;
@@ -847,6 +935,7 @@ function makeBoard({list: all, chartId, pickId, legendId}){
       lastW = w; size(); draw();
     }).observe(host);
   }
+  window.addEventListener('resize', () => { if(host.isConnected){ size(); draw(); } });
   return {select: t => { pin = t; hover = null; apply(); }, zoom: (a, b, c, d) => { dom = {x0: a, x1: b, y0: c, y1: d}; draw(); }, reset: () => { dom = {...FULL}; draw(); }};
 }
 
@@ -858,7 +947,8 @@ function renderChartPC() {
   $('main').innerHTML = `<section class="pcpanel pcchart"><div class="chart-body">
     <div id="pc-chart"></div>
     <div class="chart-side"><div class="chart-legend" id="pc-legend"></div><div class="pick" id="pc-pick" aria-live="polite"></div>
-      <p class="chart-hint"><b>드래그</b> 영역 확대<br><b>Shift+드래그</b> 이동<br><b>Ctrl+휠</b> 확대·축소<br><b>더블클릭</b> 또는 초기화 버튼: 전체 보기</p>
+      <p class="chart-hint"><b>드래그</b> 영역 확대 · <b>Shift+드래그</b> 이동 · <b>Ctrl+휠</b> 확대·축소 · <b>더블클릭</b> 전체 보기</p>
+      <p class="chart-touch">두 손가락으로 벌리면 확대, 오므리면 축소 · 확대한 뒤에는 한 손가락으로 이동 · 두 번 누르면 전체 보기</p>
       <p class="chart-caption">우상단 = 상승 지속, 좌상단 = 하락 전환, 우하단 = 상승 전환, 좌하단 = 하락 지속.<br>x = 1개월, y = 3개월 수익률</p></div></div></section>`;
   PCChart.makeBoard({list, chartId: 'pc-chart', pickId: 'pc-pick', legendId: 'pc-legend'});
 }
