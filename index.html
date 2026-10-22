@@ -153,6 +153,19 @@ nav button.on{color:var(--text);font-weight:700}
 .wl-bar button#wl-save{background:var(--bg);color:var(--text)}
 
 .cap b{color:var(--text);font-weight:800}
+
+/* PC: 같은 화면을 넓은 창에서 보기 좋게 */
+@media (min-width: 900px){
+  .wrap{max-width:760px}
+  body{padding-bottom:84px}
+  nav{justify-content:center;gap:12px}
+  nav button{flex:0 0 150px}
+  .row{grid-template-columns:48px 1fr 84px 84px;padding:13px 20px 13px 16px}
+  .gl{width:48px;height:48px}
+  .grp em b{width:84px}
+  .grp{padding-right:20px}
+  .sheet{max-width:640px;border-radius:24px;bottom:24px;left:0;right:0}
+}
 </style>
 </head>
 <body>
@@ -476,7 +489,7 @@ async function pushWatchlist() {
     if (!put.ok) throw new Error('저장하지 못했습니다 (' + put.status + '). 토큰의 Contents 쓰기 권한을 확인하세요.');
     CFG = cfg;
     const run = await fetch(`${api}/actions/workflows/update.yml/dispatches`, {method: 'POST', headers: H, body: JSON.stringify({ref: 'main'})});
-    wlMsg = run.ok ? ['ok', '저장했습니다. 새 종목의 계산에 2~3분 걸립니다. 잠시 뒤 새로고침하세요.']
+    wlMsg = run.ok ? ['ok', typeof INLINE !== 'undefined' ? '저장했습니다. 폰 앱에는 2~3분 뒤 반영됩니다. 이 PC 화면은 바탕화면 아이콘으로 다시 실행하면 새 종목이 계산됩니다.' : '저장했습니다. 새 종목의 계산에 2~3분 걸립니다. 잠시 뒤 새로고침하세요.']
                    : ['bad', '목록은 저장했지만 계산을 시작하지 못했습니다. 토큰에 Actions 쓰기 권한이 있어야 합니다. 다음 평일 아침 자동 갱신 때 반영됩니다.'];
   } catch (e) {
     wlMsg = ['bad', e.message || '저장하지 못했습니다. 네트워크를 확인하세요.'];

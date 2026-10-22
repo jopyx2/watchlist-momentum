@@ -165,46 +165,9 @@ def drop_partial_day(close: pd.DataFrame, now: dt.datetime) -> pd.DataFrame:
     return close
 
 
-# --------------------------------------------------------------------------- 인터랙티브 페이지
-def esc(s: str) -> str:
-    return html.escape(str(s), quote=False)
-
-
-def render_page(res: dict, cfg: dict) -> str:
-    """page_template.html 에 데이터를 채워 한 개의 HTML 파일로 만든다 (오프라인에서도 동작, 글꼴만 온라인 로드)."""
-    tpl = (HERE / "page_template.html").read_text(encoding="utf-8")
-    data = {"stocks": []}
-    for it in res["items"]:
-        if it["missing"]:
-            continue
-        base = {"t": it["ticker"], "n": it["name"], "s": it["label"]}
-        if it["plotted"]:
-            base["h"] = [[p[0], p[1]] for p in it["pts"]]
-        elif it["pts"][3][0] is not None:
-            base.update(h=None, x1m=it["pts"][3][0])      # 표에만 표시
-        else:
-            continue                                      # 상장 1개월 미만: 표시할 값이 없음
-        data["stocks"].append(base)
-    T, sn = res["T"], res["snaps"]
-    tickers = ", ".join(f"{w['name']} {w['ticker']}" for w in cfg["watchlist"])
-    repl = {
-        "{{DATA}}": json.dumps(data, ensure_ascii=False),
-        "{{ASOF}}": f"{T:%Y-%m-%d}", "{{M1}}": f"{months_back(T, 1):%Y-%m-%d}", "{{M3}}": f"{months_back(T, 3):%Y-%m-%d}",
-        "{{S0}}": f"{sn[0]:%m-%d}", "{{S1}}": f"{sn[1]:%m-%d}", "{{S2}}": f"{sn[2]:%m-%d}", "{{S3}}": f"{sn[3]:%m-%d}",
-        "{{PACE_BAND}}": f"{PACE_BAND:g}", "{{N_STOCK}}": str(len(data["stocks"])),
-        "{{NOTE_STOCKS}}": esc(cfg.get("page_note", "")), "{{TICKER_LIST}}": esc(tickers),
-    }
-    for k, v in repl.items():
-        tpl = tpl.replace(k, v)
-    left = re.findall(r"\{\{[A-Z0-9_]+\}\}", tpl)
-    if left:
-        raise RuntimeError(f"페이지 템플릿에 채워지지 않은 항목: {sorted(set(left))}")
-    return tpl
-
-
-# --------------------------------------------------------------------------- 스마트폰 앱용 데이터
-def export_app(res: dict, cfg: dict, path: Path) -> None:
-    """data.json: 스마트폰 앱(PWA)이 읽는 계산 결과. 판정 로직은 이 파일에만 두고 앱은 보여주기만 한다."""
+# --------------------------------------------------------------------------- 앱 데이터와 PC 화면
+def build_app_data(res: dict) -> dict:
+    """스마트폰 앱(PWA)과 PC 화면이 함께 쓰는 계산 결과. 판정 로직은 이 파일에만 두고 화면은 보여주기만 한다."""
     kst = dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=9)
     items = []
     for it in res["items"]:
@@ -220,10 +183,36 @@ def export_app(res: dict, cfg: dict, path: Path) -> None:
         else:
             rec.update(h=None, x1m=it["pts"][3][0])       # 상장 3개월 미만: 목록에만 표시
         items.append(rec)
-    data = {"asof": f"{res['T']}", "snaps": [f"{d}" for d in res["snaps"]],
+    return {"asof": f"{res['T']}", "snaps": [f"{d}" for d in res["snaps"]],
             "updated": f"{kst:%Y-%m-%d %H:%M} KST", "band": PACE_BAND, "quad_names": QUAD_NAME, "items": items}
+
+
+def export_app(data: dict, path: Path) -> None:
+    """data.json: 스마트폰 앱이 GitHub Pages 에서 읽는 파일."""
     path.parent.mkdir(exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+
+def render_page(data: dict, cfg: dict) -> str:
+    """PC 화면: 스마트폰 앱(index.html)과 같은 화면에 이번 계산 결과와 관심종목을 넣은 HTML 한 장.
+    파일로 바로 열려야 하므로 데이터·설정을 안에 넣고, 서비스 워커는 쓰지 않는다."""
+    s = (HERE / "index.html").read_text(encoding="utf-8")
+
+    def sub(old: str, new: str) -> None:
+        nonlocal s
+        if old not in s:
+            raise RuntimeError(f"앱 화면(index.html)에서 바꿀 자리를 찾지 못했습니다: {old[:50]}")
+        s = s.replace(old, new, 1)
+
+    sub("""    const r = await fetch('data.json?_=' + Date.now(), {cache: 'no-store'});
+    if (!r.ok) throw new Error(r.status);
+    D = await r.json();""", "    D = INLINE;")
+    sub("""    const r = await fetch('config.json?_=' + Date.now(), {cache: 'no-store'});
+    if (!r.ok) throw new Error(r.status);
+    CFG = await r.json();""", "    CFG = JSON.parse(JSON.stringify(INLINE_CFG));")
+    sub("if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});", "")
+    sub("const QN =", "const INLINE = " + json.dumps(data, ensure_ascii=False) + ";\nconst INLINE_CFG = " + json.dumps(cfg, ensure_ascii=False) + ";\nconst QN =")
+    return s
 
 
 # --------------------------------------------------------------------------- 실행
@@ -268,12 +257,13 @@ def run(args) -> int:
 
     OUT.mkdir(exist_ok=True)
     page_path = OUT / f"watchlist_{res['T']:%Y-%m-%d}.html"
-    page_path.write_text(render_page(res, cfg), encoding="utf-8")
+    data = build_app_data(res)
+    page_path.write_text(render_page(data, cfg), encoding="utf-8")
     latest = HERE / "관심종목_모멘텀_최신.html"
     latest.write_text(page_path.read_text(encoding="utf-8"), encoding="utf-8")
 
     if not args.asof:                   # 과거 기준일 재계산은 앱 데이터를 덮어쓰지 않는다
-        export_app(res, cfg, HERE / "data.json")
+        export_app(data, HERE / "data.json")
 
     if args.dump_json:
         slim = [{k: v for k, v in i.items() if k in ("kind", "ticker", "pts", "plotted", "sig", "x1", "x3", "c", "quad", "pace")} for i in res["items"]]
