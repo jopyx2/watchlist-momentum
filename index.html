@@ -180,6 +180,15 @@ nav button.on{color:var(--text);font-weight:700}
 .pcchart .chart-body{align-items:stretch}
 .pcchart .chart-hint b{color:var(--text)}
 .pcpanel{background:var(--surface);border-radius:18px;padding:18px;margin-bottom:10px}
+@media (max-width: 899px){
+  .pcpanel{padding:10px}
+  .pcchart .chart-hint{display:none}
+  .pcchart .chart-side{gap:10px}
+  .pcchart .chart-side .pick{order:-1;min-height:0}
+  .pcchart .chart-legend{flex-direction:row;flex-wrap:wrap;gap:6px 14px}
+  .pcchart .lg-quads{display:none}
+  .pcchart .pick .pick-sub{display:none}
+}
 .pcchart .chart-body{display:grid;
     grid-template-columns:minmax(0,1fr) 310px;
     gap:20px;
@@ -427,7 +436,7 @@ const paceOf = (x, y) => +(x - y / 3).toFixed(2);          // 속도 변화 = 1M
 // 1주 전에 상승 쪽(상승 전환·상승 지속)이었다가 지금 하락 지속으로 내려온 종목: 속도 변화(낙폭 둔화 등)보다 이 표시를 우선한다
 const TURN = {'br>bl':'반등 꺾임', 'tr>bl':'상승 꺾임'};
 const SNAP_LABELS = ['3주 전','2주 전','1주 전','현재'];
-const EMPTY_PICK = '<span>점에 마우스를 올리거나 클릭하면 그 종목의 <b>3주 전 → 2주 전 → 1주 전 → 현재</b> 이동 궤적이 주황색으로 표시되고 다른 점은 흐려집니다. 드래그하면 그 영역이 확대됩니다.</span>';
+const EMPTY_PICK = '<span>점을 누르면(마우스는 올리면) 그 종목의 <b>3주 전 → 2주 전 → 1주 전 → 현재</b> 이동 궤적이 주황색으로 표시되고 다른 점은 흐려집니다.</span>';
 const SIG_TEXT = {up:'▲ 상승 진입', dn:'▼ 하락 진입'};
 
 const quadOf = (x, y) => (y >= 0 ? 't' : 'b') + (x >= 0 ? 'r' : 'l');
@@ -847,7 +856,7 @@ function renderChartPC() {
       <p class="chart-caption">우상단 = 상승 지속, 좌상단 = 하락 전환, 우하단 = 상승 전환, 좌하단 = 하락 지속.<br>x = 1개월, y = 3개월 수익률</p></div></div></section>`;
   PCChart.makeBoard({list, chartId: 'pc-chart', pickId: 'pc-pick', legendId: 'pc-legend'});
 }
-function renderChart() { return window.matchMedia('(min-width: 900px)').matches ? renderChartPC() : renderChartMobile(); }
+function renderChart() { return renderChartPC(); }      // 폰·PC 모두 같은 차트: 점을 누르면 같은 차트 안에서 그 종목의 3주 궤적만 진하게
 
 /* ---------- 차트 ---------- */
 function smooth(pts) {
