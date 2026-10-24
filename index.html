@@ -341,7 +341,6 @@ nav button.on{color:var(--text);font-weight:700}
   </header>
   <div id="stale"></div>
   <main id="main"></main>
-  <p class="foot">배당 미반영 종가 기준 · 투자 참고용이며 투자 권유가 아닙니다.</p>
 </div>
 
 <div class="sheet-bg" id="bg"></div>
@@ -1056,8 +1055,13 @@ function openSheet(t) {
   }
   $('sheet').innerHTML = html;
   $('sheet').classList.add('open'); $('bg').classList.add('open');
+  if (!sheetOpen) { sheetOpen = true; try { history.pushState({sheet: 1}, ''); } catch (e) {} }
 }
-const closeSheet = () => { $('sheet').classList.remove('open'); $('bg').classList.remove('open'); };
+let sheetOpen = false;
+const hideSheet = () => { sheetOpen = false; $('sheet').classList.remove('open'); $('bg').classList.remove('open'); };
+// 화면의 닫기(빈 곳 누르기, 탭 전환)로 닫을 때는 쌓아 둔 '뒤로 가기' 한 칸도 같이 정리한다
+const closeSheet = () => { if (!sheetOpen) return; hideSheet(); if (history.state && history.state.sheet) { try { history.back(); } catch (e) {} } };
+window.addEventListener('popstate', () => { if (sheetOpen) hideSheet(); });
 $('bg').onclick = closeSheet;
 
 /* ---------- 관심종목 편집 ---------- */
