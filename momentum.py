@@ -167,6 +167,97 @@ def drop_partial_day(close: pd.DataFrame, now: dt.datetime) -> pd.DataFrame:
     return close
 
 
+# --------------------------------------------------------------------------- ETF 구성종목
+HOLD_DAYS = 7           # 구성종목은 천천히 바뀌므로 일주일에 한 번만 새로 받는다
+# 자주 나오는 종목의 한글 이름 (없으면 영문 이름을 줄여서 쓴다)
+KO_NAMES = {
+    "NVDA": "엔비디아", "MSFT": "마이크로소프트", "AAPL": "애플", "AMZN": "아마존", "GOOGL": "알파벳 A", "GOOG": "알파벳 C", "META": "메타",
+    "AVGO": "브로드컴", "TSLA": "테슬라", "BRK-B": "버크셔해서웨이 B", "JPM": "JP모건", "LLY": "일라이릴리", "V": "비자", "MA": "마스터카드",
+    "WMT": "월마트", "COST": "코스트코", "XOM": "엑슨모빌", "CVX": "셰브런", "UNH": "유나이티드헬스", "JNJ": "존슨앤존슨", "ABBV": "애브비",
+    "ORCL": "오라클", "NFLX": "넷플릭스", "AMD": "AMD", "INTC": "인텔", "MU": "마이크론", "QCOM": "퀄컴", "TXN": "텍사스인스트루먼트",
+    "AMAT": "어플라이드머티리얼즈", "LRCX": "램리서치", "KLAC": "KLA", "ASML": "ASML", "TSM": "TSMC", "ADI": "아날로그디바이스", "MRVL": "마벨",
+    "CRM": "세일즈포스", "ADBE": "어도비", "NOW": "서비스나우", "INTU": "인튜이트", "PANW": "팰로앨토", "CRWD": "크라우드스트라이크", "PLTR": "팔란티어",
+    "SNPS": "시놉시스", "CDNS": "케이던스", "FTNT": "포티넷", "ADSK": "오토데스크", "WDAY": "워크데이", "DDOG": "데이터독", "ZS": "지스케일러",
+    "GE": "GE에어로스페이스", "RTX": "RTX", "LMT": "록히드마틴", "BA": "보잉", "NOC": "노스럽그루먼", "GD": "제너럴다이내믹스", "LHX": "L3해리스",
+    "HII": "헌팅턴잉걸스", "KTOS": "크라토스", "HWM": "하우멧", "TDG": "트랜스다임", "AXON": "액손", "TXT": "텍스트론", "LDOS": "리도스",
+    "CAT": "캐터필러", "DE": "존디어", "HON": "허니웰", "UNP": "유니온퍼시픽", "UPS": "UPS", "ETN": "이튼", "PH": "파커하니핀", "EMR": "에머슨",
+    "LUV": "사우스웨스트항공", "DAL": "델타항공", "UAL": "유나이티드항공", "AAL": "아메리칸항공", "ALK": "알래스카항공", "JBLU": "제트블루",
+    "NEE": "넥스트에라", "SO": "서던컴퍼니", "DUK": "듀크에너지", "CEG": "컨스텔레이션에너지", "VST": "비스트라", "AEP": "AEP", "D": "도미니언",
+    "PG": "P&G", "KO": "코카콜라", "PEP": "펩시코", "PM": "필립모리스", "MO": "알트리아", "MDLZ": "몬델리즈", "CL": "콜게이트",
+    "HD": "홈디포", "LOW": "로우스", "MCD": "맥도날드", "NKE": "나이키", "SBUX": "스타벅스", "BKNG": "부킹홀딩스", "TJX": "TJX",
+    "BAC": "뱅크오브아메리카", "WFC": "웰스파고", "GS": "골드만삭스", "MS": "모건스탠리", "C": "씨티그룹", "AXP": "아메리칸익스프레스", "BLK": "블랙록",
+    "SPGI": "S&P글로벌", "SCHW": "찰스슈왑", "PGR": "프로그레시브", "CB": "처브", "MMC": "마시앤드맥레넌",
+    "MRK": "머크", "PFE": "화이자", "TMO": "써모피셔", "ABT": "애보트", "ISRG": "인튜이티브서지컬", "AMGN": "암젠", "GILD": "길리어드", "VRTX": "버텍스",
+    "LIN": "린데", "SHW": "셔윈윌리엄스", "FCX": "프리포트맥모란", "NEM": "뉴몬트", "APD": "에어프로덕츠", "ECL": "에코랩", "NUE": "뉴코어", "STLD": "스틸다이내믹스",
+    "RS": "리라이언스", "CLF": "클리블랜드클리프스", "AA": "알코아", "MP": "MP머티리얼즈", "HL": "헤클라마이닝", "CDE": "코이어마이닝", "RGLD": "로열골드",
+    "T": "AT&T", "VZ": "버라이즌", "TMUS": "T모바일", "DIS": "디즈니", "CMCSA": "컴캐스트", "CHTR": "차터", "EA": "EA", "TTWO": "테이크투", "WBD": "워너브라더스디스커버리",
+    "NBIS": "네비우스", "CRWV": "코어위브", "IREN": "아이렌", "LITE": "루멘텀", "COHR": "코히런트", "CIEN": "시에나", "ANET": "아리스타", "CSCO": "시스코",
+    "MTRN": "머티리온", "VRT": "버티브", "PWR": "콴타서비스", "GEV": "GE버노바", "SPCX": "스페이스X", "RKLB": "로켓랩", "IONQ": "아이온큐",
+    "WELL": "웰타워", "PLD": "프롤로지스", "AMT": "아메리칸타워", "EQIX": "에퀴닉스", "O": "리얼티인컴", "SPG": "사이먼프로퍼티",
+    "COP": "코노코필립스", "EOG": "EOG리소시스", "KMI": "킨더모건", "SLB": "SLB", "UBER": "우버", "SNOW": "스노우플레이크", "NET": "클라우드플레어",
+    "TGT": "타깃", "MAR": "메리어트", "DLR": "디지털리얼티", "PSA": "퍼블릭스토리지", "VLO": "발레로에너지", "MPC": "마라톤페트롤리움", "PSX": "필립스66",
+    "APP": "앱러빈", "GRMN": "가민", "HPE": "HPE", "STX": "씨게이트", "ROST": "로스스토어스", "TRV": "트래블러스", "WMB": "윌리엄스", "XEL": "엑셀에너지",
+    "SRE": "셈프라", "ETR": "엔터지", "MLM": "마틴마리에타", "VMC": "벌컨머티리얼스", "CRH": "CRH", "CMC": "커머셜메탈스", "BE": "블룸에너지", "NVT": "엔벤트",
+    "AC.TO": "에어캐나다", "CCO.TO": "카메코", "ASTS": "AST스페이스모바일", "PL": "플래닛랩스", "IRDM": "이리듐", "VSAT": "비아샛", "HUT": "헛8", "OKTA": "옥타",
+    "ESTC": "엘라스틱", "NTNX": "뉴타닉스", "TWLO": "트윌리오", "TRMB": "트림블", "ENTG": "엔테그리스", "FTI": "TechnipFMC", "UTHR": "유나이티드테라퓨틱스",
+    "THC": "테넷헬스케어", "XPO": "XPO", "SKYW": "스카이웨스트", "ALGT": "얼리전트", "ULCC": "프론티어항공", "SIRI": "시리우스XM", "ATI": "ATI", "MOG-A": "무그",
+    "005930.KS": "삼성전자", "000660.KS": "SK하이닉스", "005930.KQ": "삼성전자", "000660.KQ": "SK하이닉스", "3443.TW": "글로벌유니칩", "2330.TW": "TSMC",
+}
+_NAME_CUT = (" Class A", " Class B", " Class C", " Shs", " Inc.", " Inc", " Corp.", " Corp", " Co.", " Co", " Ltd.", " Ltd", " PLC", " plc", " N.V.", " NV", " Holdings", " Group", " Company", ",")
+
+
+def short_en(name: str) -> str:
+    n = str(name)
+    for c in _NAME_CUT:
+        i = n.find(c)
+        if i > 2:
+            n = n[:i]
+    return n.strip()[:22]
+
+
+def fetch_one_holdings(ticker: str) -> list[dict]:
+    import yfinance as yf
+
+    th = yf.Ticker(ticker).funds_data.top_holdings
+    if th is None or len(th) == 0:
+        return []
+    rows = []
+    for sym, r in th.iterrows():
+        pct = float(r["Holding Percent"]) * 100
+        if pct <= 0:
+            continue
+        sym = str(sym)
+        rows.append({"s": sym, "n": KO_NAMES.get(sym) or short_en(r["Name"]), "w": round(pct, 2)})
+    return rows
+
+
+def update_holdings(cfg: dict, prev: dict | None, today: dt.date) -> dict:
+    """섹터 ETF 별 상위 구성종목. 일주일이 안 지났고 목록에 있는 ETF 는 이전 값을 그대로 쓴다. 한 ETF 를 못 받아도 나머지는 계속."""
+    old = (prev or {}).get("holdings") or {}
+    old_items = old.get("items", {})
+    try:
+        age = (today - dt.date.fromisoformat(old.get("updated", "2000-01-01"))).days
+    except ValueError:
+        age = 999
+    fresh = age < HOLD_DAYS and os.environ.get("HOLD_FORCE") != "1"
+    items, refreshed = {}, 0
+    for w in cfg.get("sectors", []):
+        t = w["ticker"].strip().upper()
+        if fresh and t in old_items:
+            items[t] = old_items[t]
+            continue
+        try:
+            rows = fetch_one_holdings(t)
+            items[t] = {"rows": rows} if rows else {"rows": [], "note": "Holdings 정보가 없는 ETF입니다 (선물 등)"}
+            refreshed += 1
+        except Exception as e:  # noqa: BLE001
+            print(f"[holdings] {t} 실패: {type(e).__name__}", file=sys.stderr)
+            if t in old_items:
+                items[t] = old_items[t]
+        time.sleep(0.25)
+    return {"updated": f"{today}" if (refreshed or not old) else old.get("updated", f"{today}"), "items": items}
+
+
 # --------------------------------------------------------------------------- 앱 데이터와 PC 화면
 def build_app_data(res: dict) -> dict:
     """스마트폰 앱(PWA)과 PC 화면이 함께 쓰는 계산 결과. 판정 로직은 이 파일에만 두고 화면은 보여주기만 한다.
@@ -274,6 +365,16 @@ def run(args) -> int:
     OUT.mkdir(exist_ok=True)
     page_path = OUT / f"watchlist_{res['T']:%Y-%m-%d}.html"
     data = build_app_data(res)
+    try:
+        prev = json.loads((HERE / "data.json").read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        prev = None
+    try:
+        data["holdings"] = update_holdings(cfg, prev, now.date())
+    except Exception as e:  # noqa: BLE001
+        print(f"[holdings] 건너뜀: {type(e).__name__}: {e}", file=sys.stderr)
+        if prev and prev.get("holdings"):
+            data["holdings"] = prev["holdings"]
     page_path.write_text(render_page(data, cfg), encoding="utf-8")
     latest = HERE / "관심종목_모멘텀_최신.html"
     latest.write_text(page_path.read_text(encoding="utf-8"), encoding="utf-8")
