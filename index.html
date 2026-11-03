@@ -1164,7 +1164,7 @@ function renderChartMobile() {
 }
 
 /* ---------- 상세 시트 ---------- */
-function openSheet(t) {
+function openSheet(t, noPush) {
   const i = curItems().concat((D.sectors || {}).items || []).find(x => x.t === t); if (!i) return;
   let html = `<div class="sheet-in"><div class="sheet-top"><button type="button" class="sheet-back" id="sheet-back" aria-label="뒤로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2 class="sheet-h"><span class="tk"${sAttr(i)}>${i.t}</span><span class="nm" style="font-size:14px">${i.n}</span></h2></div><div class="dcard">`;
   if (!i.h) {
@@ -1181,15 +1181,28 @@ function openSheet(t) {
   $('sheet').innerHTML = html + `</div>`;
   $('sheet').scrollTop = 0; document.body.style.overflow = 'hidden';
   $('sheet-back').onclick = closeSheet;
-  if ($('sheet-hold')) $('sheet-hold').onclick = () => { const t = i.t; closeSheet(); setTimeout(() => { hold = true; holdSel = t; tab = 'list'; window.scrollTo(0, 0); render(); }, 30); };
+  if ($('sheet-hold')) $('sheet-hold').onclick = () => { const t = i.t; hideSheet(); hold = true; holdSel = t; holdFocus = null; tab = 'list'; try { history.pushState({hold: 1, from: t}, ''); } catch (e) {} window.scrollTo(0, 0); render(); };
   $('sheet').classList.add('open'); $('bg').classList.add('open');
-  if (!sheetOpen) { sheetOpen = true; try { history.pushState({sheet: 1}, ''); } catch (e) {} }
+  if (!sheetOpen) { sheetOpen = true; if (!noPush) { try { history.pushState({sheet: 1, t: t}, ''); } catch (e) {} } }
 }
 let sheetOpen = false;
 const hideSheet = () => { sheetOpen = false; document.body.style.overflow = ''; $('sheet').classList.remove('open'); $('bg').classList.remove('open'); };
 // 화면의 닫기(빈 곳 누르기, 탭 전환)로 닫을 때는 쌓아 둔 '뒤로 가기' 한 칸도 같이 정리한다
 const closeSheet = () => { if (!sheetOpen) return; hideSheet(); if (history.state && history.state.sheet) { try { history.back(); } catch (e) {} } };
-window.addEventListener('popstate', () => { if (sheetOpen) hideSheet(); });
+window.addEventListener('popstate', e => {
+  const st = e.state || {};
+  if (st.sheet) {                                   // Holdings 에서 뒤로 → 들어왔던 종목의 상세 화면으로
+    hold = false; render(); openSheet(st.t, true);
+  } else if (st.hold) {                             // 상세 화면에서 뒤로 → 그 아래 Holdings 화면으로
+    if (sheetOpen) hideSheet();
+    hold = true; render();
+  } else {                                          // 처음 화면까지 돌아옴
+    if (sheetOpen) hideSheet();
+    if (hold) { hold = false; render(); }
+  }
+});
+// 맨 위 탭으로 연 Holdings 를 다른 화면으로 떠날 때는 쌓아 둔 기록 한 칸을 같이 정리한다
+const leaveHold = () => { if (hold && history.state && history.state.hold && !history.state.from) { try { history.back(); } catch (e) {} } };
 $('bg').onclick = closeSheet;
 
 /* ---------- 관심종목·섹터 편집 (두 목록이 같은 화면을 쓴다) ---------- */
@@ -1435,9 +1448,9 @@ function render() {
   }
   (tab === 'chart' ? renderChart : tab === 'guide' ? renderGuide : renderList)();
 }
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.tab; save('tab', tab); hold = false; closeSheet(); wlMsg = null; window.scrollTo(0, 0); render(); });
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.tab; save('tab', tab); leaveHold(); hold = false; closeSheet(); wlMsg = null; window.scrollTo(0, 0); render(); });
 $('refresh').onclick = load;
-document.querySelectorAll('.seg button').forEach(b => b.onclick = () => { closeSheet(); if (b.dataset.mode === 'holdings') { hold = true; tab = 'list'; } else { hold = false; mode = b.dataset.mode; save('mode', mode); if (tab === 'watch' || tab === 'sector') { tab = 'list'; save('tab', tab); } } window.scrollTo(0, 0); render(); });
+document.querySelectorAll('.seg button').forEach(b => b.onclick = () => { closeSheet(); if (b.dataset.mode === 'holdings') { if (!hold) { hold = true; try { history.pushState({hold: 1, from: null}, ''); } catch (e) {} } tab = 'list'; } else { leaveHold(); hold = false; mode = b.dataset.mode; save('mode', mode); if (tab === 'watch' || tab === 'sector') { tab = 'list'; save('tab', tab); } } window.scrollTo(0, 0); render(); });
 window.matchMedia('(min-width: 900px)').addEventListener('change', () => { if (D && tab === 'chart') render(); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && D) load(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
