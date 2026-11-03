@@ -122,10 +122,12 @@ def compute(close: pd.DataFrame, items: list[dict], asof: dt.date | None = None)
             continue
         first = s.index[0].date()
         pts = [point(s, first, sd) for sd in snaps]
+        wk = close_on_or_before(s, T - dt.timedelta(days=7))
+        w1 = round((float(s.iloc[-1]) / wk - 1) * 100, 2) if wk else None       # 최근 7일 수익률
         cur = pts[3]
         plotted = all(p[0] is not None and p[1] is not None for p in pts)   # 4개 시점이 모두 있어야 차트·신호 대상
         rec.update(
-            pts=pts, missing=False, plotted=plotted, sig=classify(pts) if plotted else "",
+            pts=pts, missing=False, plotted=plotted, sig=classify(pts) if plotted else "", w1=w1,
             x1=cur[0], x3=cur[1], c=(round(cur[0] - cur[1], 2) if plotted else None),
             quad=quad(*cur) if plotted else None,
             pace=pace_of(*cur) if plotted else None,
@@ -167,26 +169,35 @@ def drop_partial_day(close: pd.DataFrame, now: dt.datetime) -> pd.DataFrame:
 
 # --------------------------------------------------------------------------- 앱 데이터와 PC 화면
 def build_app_data(res: dict) -> dict:
-    """스마트폰 앱(PWA)과 PC 화면이 함께 쓰는 계산 결과. 판정 로직은 이 파일에만 두고 화면은 보여주기만 한다."""
+    """스마트폰 앱(PWA)과 PC 화면이 함께 쓰는 계산 결과. 판정 로직은 이 파일에만 두고 화면은 보여주기만 한다.
+    items/missing = 관심종목, sectors = {items, missing} = 섹터 ETF 목록."""
     kst = dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=9)
-    items = []
-    for it in res["items"]:
-        if it["missing"] or it["pts"][3][0] is None:
-            continue
-        rec = {"t": it["ticker"], "n": it["name"], "g": it["label"]}
-        if it["plotted"]:
-            st = pace_state(it["quad"], it["pace"])
-            rec.update(h=[[p[0], p[1]] for p in it["pts"]], x1=it["x1"], x3=it["x3"], c=it["c"], pace=it["pace"],
-                       quad=it["quad"], prev=it["prev_quad"], sig=it["sig"],
-                       state=st[1] if st else "", state_key=st[0] if st else "",
-                       turn=TURN_DOWN.get((it["prev_quad"], it["quad"]), ""))
-        else:
-            rec.update(h=None, x1m=it["pts"][3][0])       # 상장 3개월 미만: 목록에만 표시
-        items.append(rec)
-    shown = {r["t"] for r in items}
-    missing = [it["ticker"] for it in res["items"] if it["ticker"] not in shown]      # 시세가 없거나 상장 1개월 미만: 앱이 '계산 중'과 구분해 보여준다
+
+    def pack(kind: str) -> dict:
+        items, mine = [], [it for it in res["items"] if it["kind"] == kind]
+        for it in mine:
+            if it["missing"] or it["pts"][3][0] is None:
+                continue
+            rec = {"t": it["ticker"], "n": it["name"], "g": it["label"], "w1": it.get("w1")}
+            if it.get("style"):
+                rec["st"] = it["style"]
+            if it["plotted"]:
+                st = pace_state(it["quad"], it["pace"])
+                rec.update(h=[[p[0], p[1]] for p in it["pts"]], x1=it["x1"], x3=it["x3"], c=it["c"], pace=it["pace"],
+                           quad=it["quad"], prev=it["prev_quad"], sig=it["sig"],
+                           state=st[1] if st else "", state_key=st[0] if st else "",
+                           turn=TURN_DOWN.get((it["prev_quad"], it["quad"]), ""))
+            else:
+                rec.update(h=None, x1m=it["pts"][3][0])       # 상장 3개월 미만: 목록에만 표시
+            items.append(rec)
+        shown = {r["t"] for r in items}
+        missing = [it["ticker"] for it in mine if it["ticker"] not in shown]      # 시세가 없거나 상장 1개월 미만: 앱이 '계산 중'과 구분해 보여준다
+        return {"items": items, "missing": missing}
+
+    w, sec = pack("stock"), pack("etf")
     return {"asof": f"{res['T']}", "snaps": [f"{d}" for d in res["snaps"]],
-            "updated": f"{kst:%Y-%m-%d %H:%M} KST", "band": PACE_BAND, "quad_names": QUAD_NAME, "items": items, "missing": missing}
+            "updated": f"{kst:%Y-%m-%d %H:%M} KST", "band": PACE_BAND, "quad_names": QUAD_NAME,
+            "items": w["items"], "missing": w["missing"], "sectors": sec}
 
 
 def export_app(data: dict, path: Path) -> None:
@@ -219,14 +230,17 @@ def render_page(data: dict, cfg: dict) -> str:
 
 # --------------------------------------------------------------------------- 실행
 def load_items(cfg: dict) -> list[dict]:
-    seen, items = set(), []
-    for w in cfg["watchlist"]:
-        sym = w["ticker"].strip().upper().replace(".", "-")      # BRK.B -> BRK-B (yfinance 표기)
-        if sym in seen:
-            continue
-        seen.add(sym)
-        items.append({"kind": "stock", "ticker": w["ticker"].strip().upper(), "yf": sym,
-                      "name": w.get("name") or w["ticker"], "label": w.get("group") or cfg.get("group", "관심종목")})
+    """관심종목(kind=stock)과 섹터 ETF(kind=etf)를 한 목록으로. 같은 티커가 두 목록에 있어도 각각 계산한다(시세는 한 번만 받음)."""
+    items = []
+    for kind, key, label in (("stock", "watchlist", cfg.get("group", "관심종목")), ("etf", "sectors", "섹터")):
+        seen = set()
+        for w in cfg.get(key, []):
+            sym = w["ticker"].strip().upper().replace(".", "-")      # BRK.B -> BRK-B (yfinance 표기)
+            if sym in seen:
+                continue
+            seen.add(sym)
+            items.append({"kind": kind, "ticker": w["ticker"].strip().upper(), "yf": sym,
+                          "name": w.get("name") or w["ticker"], "label": w.get("group") or label, "style": w.get("style", "")})
     return items
 
 
