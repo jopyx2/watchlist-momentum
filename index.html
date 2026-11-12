@@ -346,8 +346,8 @@ nav button.on{color:var(--text);font-weight:700}
 @media (min-width: 900px){ .wrap.wide{max-width:1180px} .wrap.wide header{padding:10px 0 8px} .wrap.wide .asof{font-size:20px} .wrap.wide .sub{display:none} .wrap.wide .foot{display:none} .wrap.wide .pcpanel{margin-bottom:0} }
 
 /* 상단 전환 스위치 */
-.seg{display:inline-flex;background:var(--surface-2);border-radius:12px;padding:3px;gap:2px;max-width:100%}
-.seg button{border:0;background:none;color:var(--text-3);font:inherit;font-size:13px;font-weight:600;padding:7px 12px;border-radius:9px;white-space:nowrap}
+.seg{display:flex;width:100%;background:var(--surface-2);border-radius:12px;padding:3px;gap:2px}
+.seg button{flex:1 1 0;min-width:0;text-align:center;border:0;background:none;color:var(--text-3);font:inherit;font-size:12.5px;font-weight:600;letter-spacing:-.3px;padding:8px 2px;border-radius:9px;white-space:nowrap}
 .seg button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.18)}
 header .asof{margin-top:8px}
 
@@ -472,12 +472,12 @@ const cls = v => v > 0 ? 'pos' : v < 0 ? 'neg' : '';
 const quadOf = (x, y) => (y >= 0 ? 't' : 'b') + (x >= 0 ? 'r' : 'l');
 
 let D = null, tab = 'list', filter = 'all', sortKey = 'pace';
-try { tab = localStorage.getItem('tab') || 'list'; filter = localStorage.getItem('filter') || 'all'; sortKey = localStorage.getItem('sort') || 'pace'; } catch (e) {}
+// 앱을 열면 항상 '관심종목 모멘텀' 모멘텀 탭에서 시작한다 (마지막 화면을 기억하지 않음)
 const save = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 
 /* 목록 선택: 관심종목 / 섹터. 모멘텀·차트 탭이 지금 고른 목록을 보여준다 */
 let mode = 'watch';
-try { mode = localStorage.getItem('mode') === 'sector' ? 'sector' : 'watch'; } catch (e) {}
+
 const curItems = () => mode === 'sector' ? ((D.sectors || {}).items || []) : D.items;
 const HOLD_LABEL = 'ETF Holdings';       // 버튼 이름: 나중에 'Holdings' 같은 용어로 바꿀 때 여기만 고치면 된다
 const STYLE = {시장: 'mk', 가치: 'va', 성장: 'gr', 소형: 'sm', 중형: 'md', 원자재: 'co', 테마: 'th'};
@@ -1450,7 +1450,36 @@ function render() {
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.tab; save('tab', tab); leaveHold(); hold = false; closeSheet(); wlMsg = null; window.scrollTo(0, 0); render(); });
 $('refresh').onclick = load;
-document.querySelectorAll('.seg button').forEach(b => b.onclick = () => { closeSheet(); if (b.dataset.mode === 'holdings') { if (!hold) { hold = true; try { history.pushState({hold: 1, from: null}, ''); } catch (e) {} } tab = 'list'; } else { leaveHold(); hold = false; mode = b.dataset.mode; save('mode', mode); if (tab === 'watch' || tab === 'sector') { tab = 'list'; save('tab', tab); } } window.scrollTo(0, 0); render(); });
+function switchView(m) {
+  closeSheet();
+  if (m === 'holdings') { if (!hold) { hold = true; try { history.pushState({hold: 1, from: null}, ''); } catch (e) {} } tab = 'list'; }
+  else { leaveHold(); hold = false; mode = m; save('mode', mode); if (tab === 'watch' || tab === 'sector') { tab = 'list'; save('tab', tab); } }
+  window.scrollTo(0, 0); render();
+}
+document.querySelectorAll('.seg button').forEach(b => b.onclick = () => switchView(b.dataset.mode));
+
+/* 화면을 좌우로 쓸어 넘기기: 오른쪽→왼쪽으로 쓸면 다음(관심종목 → 섹터 → ETF Holdings), 반대로 쓸면 이전 */
+const VIEWS = ['watch', 'sector', 'holdings'];
+(function () {
+  let sx = 0, sy = 0, t0 = 0, ok = false;
+  document.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    ok = e.touches.length === 1 && !sheetOpen && (tab === 'list' || tab === 'chart') &&
+         !e.target.closest('.hp-row, .chart-wrap, input, select, textarea');       // 칩 가로 스크롤, 차트 확대·이동, 입력칸은 제외
+    sx = t.clientX; sy = t.clientY; t0 = Date.now();
+  }, {passive: true});
+  document.addEventListener('touchcancel', () => { ok = false; }, {passive: true});
+  document.addEventListener('touchend', e => {
+    if (!ok) return; ok = false;
+    const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6 || Date.now() - t0 > 700) return;   // 충분히 길고, 세로보다 가로로 쓸고, 너무 느리지 않을 때만
+    const next = VIEWS.indexOf(hold ? 'holdings' : mode) + (dx < 0 ? 1 : -1);
+    if (next < 0 || next >= VIEWS.length) return;
+    switchView(VIEWS[next]);
+    const main = $('main');
+    if (main.animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) main.animate([{transform: `translateX(${dx < 0 ? 28 : -28}px)`, opacity: .35}, {transform: 'none', opacity: 1}], {duration: 180, easing: 'ease-out'});
+  }, {passive: true});
+})();
 window.matchMedia('(min-width: 900px)').addEventListener('change', () => { if (D && tab === 'chart') render(); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && D) load(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
