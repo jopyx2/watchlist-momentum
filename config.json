@@ -6,7 +6,6 @@
     {"ticker": "AAPL", "name": "애플"},
     {"ticker": "AMZN", "name": "아마존"},
     {"ticker": "LLY", "name": "일라이릴리"},
-    {"ticker": "KTOS", "name": "크라토스"},
     {"ticker": "SPCX", "name": "스페이스X"},
     {"ticker": "RKLB", "name": "로켓랩"},
     {"ticker": "IONQ", "name": "아이온큐"},
@@ -21,7 +20,11 @@
     {"ticker": "MSFT", "name": "MSFT"},
     {"ticker": "JNJ", "name": "존슨앤존슨"},
     {"ticker": "UNH", "name": "유나이티드헬스"},
-    {"ticker": "AMGN", "name": "암젠"}
+    {"ticker": "AMGN", "name": "암젠"},
+    {"ticker": "MCD", "name": "맥도날드"},
+    {"ticker": "ABBV", "name": "애브비"},
+    {"ticker": "WMT", "name": "월마트"},
+    {"ticker": "RCL", "name": "로열캐리비안"}
   ],
   "sectors": [
     {"ticker": "SPY", "name": "S&P 500", "style": "시장"},
