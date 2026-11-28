@@ -465,6 +465,7 @@ tspan.thdt{font-size:7px;font-weight:400} tspan.thdt[data-d=h]{fill:#1D9E75} tsp
 .px-ind{display:flex;align-items:center;gap:6px;padding:6px 4px 4px;font-size:11.5px;color:var(--text-3)}
 .px-ind button{border:1px solid var(--line);background:transparent;color:var(--text-2);font:inherit;font-weight:600;border-radius:999px;padding:3px 11px}
 .px-ind button.on{background:var(--text);border-color:var(--text);color:var(--surface)}
+.px-hint{padding:2px 4px 4px;font-size:11px;color:var(--text-3);text-align:center}
 .px-svg{display:block;width:100%;touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .px-svg text{font-family:inherit;fill:var(--text-3);font-size:10.5px;font-variant-numeric:tabular-nums}
 
@@ -1274,12 +1275,13 @@ const PX = (() => {
     const D = S.D, last = D.c.length - 1, prev = last > 0 ? D.c[last - 1] : D.c[last], dchg = (D.c[last] / prev - 1) * 100;
     el.innerHTML = `<div class="px-head"><b>${D.c[last].toFixed(D.c[last] >= 1 ? 2 : 3)}</b><span class="chg" style="color:${col(dchg >= 0)}">${(D.c[last] - prev >= 0 ? '+' : '') + (D.c[last] - prev).toFixed(2)} (${sg(dchg)})</span><small>${fd(D.t[last])} 종가</small></div>
       <div class="px-info" id="px-info"></div>
-      <div class="px-ctl" id="px-ctl">${PERIODS.map(p => `<button type="button" data-p="${p[0]}">${p[0]}</button>`).join('')}<span class="sp"></span><button type="button" class="ty" id="px-ty"></button></div>
+      <div class="px-ctl" id="px-ctl">${PERIODS.map(p => `<button type="button" data-p="${p[0]}">${p[0]}</button>`).join('')}<span class="sp"></span><button type="button" class="ty" id="px-zr" hidden>원래대로</button><button type="button" class="ty" id="px-ty"></button></div>
       <div class="px-ma" id="px-ma"></div>
       <div class="px-ind" id="px-ind"><span>보조지표</span>${INDS.map(([k, n]) => `<button type="button" data-i="${k}">${n}</button>`).join('')}</div>
-      <svg class="px-svg" id="px-svg" role="img" aria-label="주가 차트"></svg>`;
+      <svg class="px-svg" id="px-svg" role="img" aria-label="주가 차트"></svg>
+      <div class="px-hint">좌우로 끌면 그 구간이 확대됩니다 · 두 번 누르면 원래대로</div>`;
     const $q = id => el.querySelector('#' + id), svg = $q('px-svg');
-    let view = null, selIdx = null;
+    let view = null, selIdx = null, zoom = null;        // zoom: {a, b} = 확대한 구간의 시작·끝 봉 번호 (시리즈 전체 기준)
 
     function indText(kind, i, ser) {
       const I = inds(ser);
@@ -1297,13 +1299,13 @@ const PX = (() => {
     }
 
     function draw() {
-      const per = PERIODS.find(p => p[0] === st.per), ser = S[per[1]], total = ser.c.length, n = Math.min(per[2], total), i0 = total - n, I = inds(ser);
+      const per = PERIODS.find(p => p[0] === st.per), ser = S[per[1]], total = ser.c.length, n = zoom ? zoom.b - zoom.a + 1 : Math.min(per[2], total), i0 = zoom ? zoom.a : total - n, I = inds(ser);
       const panels = INDS.map(([k]) => k).filter(k => st.ind[k]);
       const W = Math.max(280, Math.floor(svg.getBoundingClientRect().width || svg.parentNode.clientWidth || 340));
-      const ML = 4, MR = 50, pT = 8, pB = 226, vT = 240, vB = 282, PH = 66, PG = 10, plotW = W - ML - MR, step = plotW / n, bw = Math.max(1, Math.min(14, step * 0.66));
+      const ML = 4, MR = 50, pT = 8, pB = 226, vT = 240, vB = 282, PH = 66, PG = 10, plotW = W - ML - MR, step = plotW / n, bw = Math.max(1, Math.min(24, step * 0.66));
       const bottom = vB + panels.length * (PH + PG), H = bottom + 26;
       let lo = Infinity, hi = -Infinity, vmax = 0;
-      for (let i = i0; i < total; i++) {
+      for (let i = i0; i < i0 + n; i++) {
         const a = st.type === 'candle' ? ser.l[i] : ser.c[i], b = st.type === 'candle' ? ser.h[i] : ser.c[i];
         if (a < lo) lo = a; if (b > hi) hi = b; if (ser.v[i] > vmax) vmax = ser.v[i];
       }
@@ -1330,7 +1332,7 @@ const PX = (() => {
         }
       }
       s += vs + `<text x="${ML + 2}" y="${vT + 9}" style="font-size:10px">거래량</text>`;
-      const trendUp = ser.c[total - 1] >= ser.c[i0];
+      const trendUp = ser.c[i0 + n - 1] >= ser.c[i0];
       if (st.type === 'line') {
         let d = ''; for (let k = 0; k < n; k++) d += `${k ? 'L' : 'M'}${x(k).toFixed(1)},${y(ser.c[i0 + k]).toFixed(1)}`;
         s += `<path d="${d}L${x(n - 1).toFixed(1)},${pB}L${x(0).toFixed(1)},${pB}Z" fill="${col(trendUp)}" opacity=".10"/><path d="${d}" fill="none" stroke="${col(trendUp)}" stroke-width="1.8" stroke-linejoin="round"/>`;
@@ -1346,7 +1348,7 @@ const PX = (() => {
       const tag = (k, v, yy, dy) => { const right = k > n * 0.6; return `<text x="${(x(k) + (right ? -4 : 4)).toFixed(1)}" y="${(yy + dy).toFixed(1)}" text-anchor="${right ? 'end' : 'start'}" style="fill:var(--text-2);font-weight:600">${v.toFixed(2)}</text>`; };
       if (st.type === 'candle') s += tag(kh, ser.h[i0 + kh], y(ser.h[i0 + kh]), -3) + tag(kl, ser.l[i0 + kl], y(ser.l[i0 + kl]), 11);
       const lc = ser.c[total - 1], lu = ser.c[total - 1] >= ser.o[total - 1];
-      s += `<line x1="${ML}" x2="${W - MR}" y1="${y(lc).toFixed(1)}" y2="${y(lc).toFixed(1)}" stroke="${col(lu)}" stroke-dasharray="3 3" opacity=".7"/>` +
+      if (i0 + n === total) s += `<line x1="${ML}" x2="${W - MR}" y1="${y(lc).toFixed(1)}" y2="${y(lc).toFixed(1)}" stroke="${col(lu)}" stroke-dasharray="3 3" opacity=".7"/>` +
            `<rect x="${W - MR + 1}" y="${(y(lc) - 8).toFixed(1)}" width="${MR - 2}" height="16" rx="4" fill="${col(lu)}"/><text x="${W - MR + 5}" y="${(y(lc) + 3.5).toFixed(1)}" style="fill:#fff;font-weight:700">${lc.toFixed(2)}</text>`;
       // 보조지표 패널
       panels.forEach((kind, pi) => {
@@ -1359,7 +1361,7 @@ const PX = (() => {
           s += line(i => arr[i], yy, c, 1.5);
         } else {
           let mn = Infinity, mx = -Infinity;
-          for (let i = i0; i < total; i++) for (const v of [I.macd[i], I.sig[i], I.hist[i]]) if (v != null) { if (v < mn) mn = v; if (v > mx) mx = v; }
+          for (let i = i0; i < i0 + n; i++) for (const v of [I.macd[i], I.sig[i], I.hist[i]]) if (v != null) { if (v < mn) mn = v; if (v > mx) mx = v; }
           if (!isFinite(mn)) { mn = -1; mx = 1; }
           const m0 = Math.max(Math.abs(mn), Math.abs(mx)) * 1.08 || 1, yy = v => t0 + (m0 - v) / (2 * m0) * hgt, zy = yy(0);
           s += `<line x1="${ML}" x2="${W - MR}" y1="${zy.toFixed(1)}" y2="${zy.toFixed(1)}" stroke="var(--text-3)" stroke-dasharray="3 3" opacity=".6"/><text x="${W - MR + 6}" y="${(zy + 3.5).toFixed(1)}">0</text>`;
@@ -1368,12 +1370,13 @@ const PX = (() => {
           s += line(i => I.macd[i], yy, '#3b82f6', 1.3) + line(i => I.sig[i], yy, '#f59e0b', 1.3);
         }
       });
-      s += `<g id="px-cx" pointer-events="none"></g>`;
+      s += `<g id="px-sel" pointer-events="none"></g><g id="px-cx" pointer-events="none"></g>`;
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('height', H); svg.innerHTML = s;
       view = {ser, i0, n, W, ML, MR, step, y, x, pB, bottom, H};
       el.querySelectorAll('#px-ctl [data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === st.per));
       el.querySelectorAll('#px-ind [data-i]').forEach(b => b.classList.toggle('on', !!st.ind[b.dataset.i]));
       $q('px-ty').textContent = st.type === 'candle' ? '캔들' : '라인';
+      $q('px-zr').hidden = !zoom;
       info(selIdx != null && selIdx < n ? selIdx : null);
       if (selIdx != null && selIdx < n) cross(selIdx);
     }
@@ -1392,10 +1395,43 @@ const PX = (() => {
       const k = Math.max(0, Math.min(view.n - 1, Math.floor((px - view.ML) / view.step)));
       selIdx = k; cross(k); info(k);
     }
-    svg.addEventListener('pointerdown', pick);
-    svg.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || e.buttons || e.pointerType === 'touch' || e.pointerType === 'pen') pick(e); });
-    svg.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') { selIdx = null; const c = $q('px-cx'); if (c) c.innerHTML = ''; if (view) info(null); } });
-    el.querySelectorAll('#px-ctl [data-p]').forEach(b => b.onclick = () => { st.per = b.dataset.p; lsSet('px_per', st.per); selIdx = null; draw(); });
+    let drag = null, lastTap = 0;
+    const kOf = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) * (view.W / r.width); return {px, k: Math.max(0, Math.min(view.n - 1, Math.floor((px - view.ML) / view.step)))}; };
+    const resetZoom = () => { if (!zoom) return; zoom = null; selIdx = null; draw(); };
+    svg.addEventListener('pointerdown', e => {
+      if (!view) return;
+      const c = kOf(e); drag = {id: e.pointerId, x0: e.clientX, px0: c.px, k0: c.k, on: false};
+      try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    svg.addEventListener('pointermove', e => {
+      if (!view) return;
+      if (drag && drag.id === e.pointerId) {                       // 누른 채로 좌우로 끄는 중: 구간 선택
+        if (!drag.on && Math.abs(e.clientX - drag.x0) > 8) drag.on = true;
+        if (drag.on) { const c = kOf(e), a = Math.min(drag.px0, c.px), b = Math.max(drag.px0, c.px);
+          $q('px-sel').innerHTML = `<rect x="${a.toFixed(1)}" y="8" width="${(b - a).toFixed(1)}" height="${view.bottom - 8}" fill="var(--text)" opacity=".09"/><line x1="${a.toFixed(1)}" x2="${a.toFixed(1)}" y1="8" y2="${view.bottom}" stroke="var(--text-2)"/><line x1="${b.toFixed(1)}" x2="${b.toFixed(1)}" y1="8" y2="${view.bottom}" stroke="var(--text-2)"/>`; }
+        return;
+      }
+      if (e.pointerType === 'mouse') pick(e);                      // 마우스를 올리면 십자선
+    });
+    const end = (e, cancel) => {
+      if (!drag || drag.id !== e.pointerId) return;
+      const d = drag; drag = null; const sel = $q('px-sel'); if (sel) sel.innerHTML = '';
+      if (cancel || !view) return;
+      if (d.on) {                                                  // 끌었다 놓음: 그 구간으로 확대 (너무 좁으면 무시)
+        const k1 = kOf(e).k, ka = Math.min(d.k0, k1), kb = Math.max(d.k0, k1);
+        if (kb - ka + 1 >= 5) { zoom = {a: view.i0 + ka, b: view.i0 + kb}; selIdx = null; draw(); }
+        return;
+      }
+      const now = Date.now();                                      // 짧게 누름: 십자선, 빠르게 두 번이면 확대 해제
+      if (zoom && now - lastTap < 320) { lastTap = 0; resetZoom(); return; }
+      lastTap = now; pick(e);
+    };
+    svg.addEventListener('pointerup', e => end(e, false));
+    svg.addEventListener('pointercancel', e => end(e, true));
+    svg.addEventListener('dblclick', resetZoom);
+    svg.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !drag) { selIdx = null; const c = $q('px-cx'); if (c) c.innerHTML = ''; if (view) info(null); } });
+    $q('px-zr').onclick = resetZoom;
+    el.querySelectorAll('#px-ctl [data-p]').forEach(b => b.onclick = () => { st.per = b.dataset.p; lsSet('px_per', st.per); selIdx = null; zoom = null; draw(); });
     el.querySelectorAll('#px-ind [data-i]').forEach(b => b.onclick = () => { st.ind[b.dataset.i] = st.ind[b.dataset.i] ? 0 : 1; lsSet('px_ind', JSON.stringify(st.ind)); draw(); });
     $q('px-ty').onclick = () => { st.type = st.type === 'candle' ? 'line' : 'candle'; lsSet('px_type', st.type); draw(); };
     draw();
