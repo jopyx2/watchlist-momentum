@@ -1197,18 +1197,23 @@ function openSheet(t, noPush) {
   $('sheet').innerHTML = html + `</div>`;
   $('sheet').scrollTop = 0; document.body.style.overflow = 'hidden';
   $('sheet-back').onclick = closeSheet;
-  if ($('sheet-hold')) $('sheet-hold').onclick = () => { const t = i.t; hideSheet(); hold = true; holdSel = t; holdFocus = null; tab = 'list'; try { history.pushState({hold: 1, from: t}, ''); } catch (e) {} window.scrollTo(0, 0); render(); };
+  if ($('sheet-hold')) $('sheet-hold').onclick = () => { const t = i.t; hideSheet(); hold = true; holdSel = t; holdFocus = null; tab = 'list'; pushNav({hold: 1, from: t}); window.scrollTo(0, 0); render(); };
   $('sheet').classList.add('open'); $('bg').classList.add('open');
-  if (!sheetOpen) { sheetOpen = true; if (!noPush) { try { history.pushState({sheet: 1, t: t}, ''); } catch (e) {} } }
+  if (!sheetOpen) { sheetOpen = true; if (!noPush) pushNav({sheet: 1, t: t, tab: tab, mode: mode}); }
 }
 let sheetOpen = false;
+let hdepth = 0;                                      // 이 앱이 쌓아 둔 '뒤로 가기' 칸 수 (상세 화면·Holdings 하나당 1)
+const pushNav = st => { try { history.pushState(Object.assign({d: hdepth + 1}, st), ''); hdepth++; } catch (e) {} };
 const hideSheet = () => { sheetOpen = false; document.body.style.overflow = ''; $('sheet').classList.remove('open'); $('bg').classList.remove('open'); };
-// 화면의 닫기(빈 곳 누르기, 탭 전환)로 닫을 때는 쌓아 둔 '뒤로 가기' 한 칸도 같이 정리한다
+// 화면의 닫기(빈 곳 누르기, 뒤로 화살표)로 상세를 닫을 때는 쌓아 둔 '뒤로 가기' 한 칸도 같이 정리한다
 const closeSheet = () => { if (!sheetOpen) return; hideSheet(); if (history.state && history.state.sheet) { try { history.back(); } catch (e) {} } };
+// 탭·상단 전환으로 다른 화면에 가면 앱이 쌓은 기록을 모두 되감는다 (남겨 두면 나중에 '뒤로'가 엉뚱한 화면으로 간다)
+const unwindNav = () => { hideSheet(); if (hdepth > 0) { const n = hdepth; hdepth = 0; try { history.go(-n); } catch (e) {} } };
 window.addEventListener('popstate', e => {
   const st = e.state || {};
-  if (st.sheet) {                                   // Holdings 에서 뒤로 → 들어왔던 종목의 상세 화면으로
-    hold = false; render(); openSheet(st.t, true);
+  hdepth = st.d || 0;
+  if (st.sheet) {                                   // Holdings 에서 뒤로 → 들어왔던 종목의 상세 화면으로 (그때의 탭·보기도 되살린다)
+    hold = false; if (st.tab) tab = st.tab; if (st.mode) mode = st.mode; render(); openSheet(st.t, true);
   } else if (st.hold) {                             // 상세 화면에서 뒤로 → 그 아래 Holdings 화면으로
     if (sheetOpen) hideSheet();
     hold = true; render();
@@ -1217,8 +1222,6 @@ window.addEventListener('popstate', e => {
     if (hold) { hold = false; render(); }
   }
 });
-// 맨 위 탭으로 연 Holdings 를 다른 화면으로 떠날 때는 쌓아 둔 기록 한 칸을 같이 정리한다
-const leaveHold = () => { if (hold && history.state && history.state.hold && !history.state.from) { try { history.back(); } catch (e) {} } };
 $('bg').onclick = closeSheet;
 
 /* ---------- 관심종목·섹터 편집 (두 목록이 같은 화면을 쓴다) ---------- */
@@ -1466,12 +1469,11 @@ function render() {
   }
   (tab === 'chart' ? renderChart : tab === 'guide' ? renderGuide : renderList)();
 }
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.tab; save('tab', tab); leaveHold(); hold = false; closeSheet(); wlMsg = null; window.scrollTo(0, 0); render(); });
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.tab; save('tab', tab); unwindNav(); hold = false; wlMsg = null; window.scrollTo(0, 0); render(); });
 $('refresh').onclick = load;
 function switchView(m) {
-  closeSheet();
-  if (m === 'holdings') { if (!hold) { hold = true; try { history.pushState({hold: 1, from: null}, ''); } catch (e) {} } tab = 'list'; }
-  else { leaveHold(); hold = false; mode = m; save('mode', mode); if (tab === 'watch' || tab === 'sector') { tab = 'list'; save('tab', tab); } }
+  if (m === 'holdings') { hideSheet(); if (!hold) { hold = true; pushNav({hold: 1, from: null}); } tab = 'list'; }
+  else { unwindNav(); hold = false; mode = m; save('mode', mode); if (tab === 'watch' || tab === 'sector') { tab = 'list'; save('tab', tab); } }
   window.scrollTo(0, 0); render();
 }
 document.querySelectorAll('.seg button').forEach(b => b.onclick = () => switchView(b.dataset.mode));
@@ -1499,8 +1501,11 @@ const VIEWS = ['watch', 'sector', 'holdings'];
   }, {passive: true});
 })();
 window.matchMedia('(min-width: 900px)').addEventListener('change', () => { if (D && tab === 'chart') render(); });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && D) load(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && D && tab !== 'watch' && tab !== 'sector') load(); });   // 편집 중에는 화면을 다시 그리지 않는다 (입력 중인 티커가 지워지지 않게)
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if (history.state && (history.state.sheet || history.state.hold)) {   // 새로고침 뒤 남은 상세·Holdings 기록 칸 정리
+  try { if (history.state.d) history.go(-history.state.d); else history.replaceState(null, ''); } catch (e) {}
+}
 load();
 </script>
 </body>
