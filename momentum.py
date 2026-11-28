@@ -201,6 +201,34 @@ KO_NAMES = {
     "AC.TO": "에어캐나다", "CCO.TO": "카메코", "ASTS": "AST스페이스모바일", "PL": "플래닛랩스", "IRDM": "이리듐", "VSAT": "비아샛", "HUT": "헛8", "OKTA": "옥타",
     "ESTC": "엘라스틱", "NTNX": "뉴타닉스", "TWLO": "트윌리오", "TRMB": "트림블", "ENTG": "엔테그리스", "FTI": "TechnipFMC", "UTHR": "유나이티드테라퓨틱스",
     "THC": "테넷헬스케어", "XPO": "XPO", "SKYW": "스카이웨스트", "ALGT": "얼리전트", "ULCC": "프론티어항공", "SIRI": "시리우스XM", "ATI": "ATI", "MOG-A": "무그",
+    "GKOS": "글라우코스",
+    "BTSG": "브라이트스프링헬스",
+    "FROG": "제이프로그",
+    "TWST": "트위스트바이오사이언스",
+    "UMBF": "UMB파이낸셜",
+    "SM": "SM에너지",
+    "EAT": "브링커인터내셔널",
+    "RHP": "라이먼호스피탈리티",
+    "SNX": "TD시넥스",
+    "HLT": "힐튼",
+    "EXC": "엑셀론",
+    "TRGP": "타르가리소시스",
+    "SKHY": "SK하이닉스",
+    "MRNA": "모더나",
+    "NTRA": "나테라",
+    "HALO": "할로자임",
+    "BIIB": "바이오젠",
+    "EXEL": "엑셀릭시스",
+    "HONA": "허니웰에어로스페이스",
+    "ECHO": "에코스타",
+    "GSAT": "글로벌스타",
+    "HQ": "호라이즌퀀텀",
+    "REY.MI": "리플라이",
+    "RDNT": "래드넷",
+    "FN": "파브리넷",
+    "VMRK": "비브마크레지던셜",
+    "VRTPX": "뱅가드 리츠 인덱스",
+    "FGXXX": "퍼스트아메리칸 MMF",
     "005930.KS": "삼성전자", "000660.KS": "SK하이닉스", "005930.KQ": "삼성전자", "000660.KQ": "SK하이닉스", "3443.TW": "글로벌유니칩", "2330.TW": "TSMC",
 }
 _NAME_CUT = (" Class A", " Class B", " Class C", " Shs", " Inc.", " Inc", " Corp.", " Corp", " Co.", " Co", " Ltd.", " Ltd", " PLC", " plc", " N.V.", " NV", " Holdings", " Group", " Company", ",")
@@ -245,6 +273,9 @@ def update_holdings(cfg: dict, prev: dict | None, today: dt.date) -> dict:
         t = w["ticker"].strip().upper()
         if fresh and t in old_items:
             items[t] = old_items[t]
+            for r in items[t].get("rows", []):       # 이전 값을 쓰더라도 이름표에 새로 생긴 한글 이름은 적용한다
+                if r.get("s") in KO_NAMES:
+                    r["n"] = KO_NAMES[r["s"]]
             continue
         try:
             rows = fetch_one_holdings(t)
