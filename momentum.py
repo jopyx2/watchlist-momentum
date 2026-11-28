@@ -357,7 +357,7 @@ def build_prices(raw, last_date, items: list[dict]) -> dict:
                     "l": [round(float(v), 2) for v in frame["Low"]], "c": [round(float(v), 2) for v in frame["Close"]],
                     "v": [int(v) for v in frame["Volume"]]}
 
-        daily = df.tail(260)
+        daily = df.tail(460)
         g = pd.Grouper(freq="W-FRI")
         wk = df.groupby(g).agg(Open=("Open", "first"), High=("High", "max"), Low=("Low", "min"), Close=("Close", "last"), Volume=("Volume", "sum"))
         wk["d"] = df.index.to_series().groupby(g).max()

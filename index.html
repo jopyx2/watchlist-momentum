@@ -461,6 +461,9 @@ tspan.thdt{font-size:7px;font-weight:400} tspan.thdt[data-d=h]{fill:#1D9E75} tsp
 .px-ma button{border:0;background:transparent;padding:3px 0;font:inherit;color:var(--text-2);display:inline-flex;align-items:center;gap:5px;font-variant-numeric:tabular-nums}
 .px-ma button i{width:14px;height:3px;border-radius:2px;display:inline-block}
 .px-ma button.off{opacity:.38}
+.px-ind{display:flex;align-items:center;gap:6px;padding:6px 4px 4px;font-size:11.5px;color:var(--text-3)}
+.px-ind button{border:1px solid var(--line);background:transparent;color:var(--text-2);font:inherit;font-weight:600;border-radius:999px;padding:3px 11px}
+.px-ind button.on{background:var(--text);border-color:var(--text);color:var(--surface)}
 .px-svg{display:block;width:100%;touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .px-svg text{font-family:inherit;fill:var(--text-3);font-size:10.5px;font-variant-numeric:tabular-nums}
 
@@ -1201,7 +1204,7 @@ function renderChartMobile() {
 }
 
 
-/* ---------- 주가 차트 (캔들·거래량·이동평균, 십자선) ---------- */
+/* ---------- 주가 차트 (캔들·거래량·이동평균·RSI·MACD·MFI, 십자선) ---------- */
 let PRICES = null, pricesP = null;
 async function loadPrices() {
   if (PRICES) return PRICES;
@@ -1215,20 +1218,46 @@ async function loadPrices() {
 }
 const PX = (() => {
   const PERIODS = [['1M', 'D', 21], ['3M', 'D', 63], ['6M', 'D', 126], ['1Y', 'D', 252], ['3Y', 'W', 156], ['5Y', 'W', 260]];
-  const MAS = [[5, '#f59e0b'], [20, '#3b82f6'], [60, '#a855f7']];
+  const MAS = [[20, '#3b82f6'], [50, '#f59e0b'], [200, '#a855f7']];
+  const INDS = [['rsi', 'RSI'], ['macd', 'MACD'], ['mfi', 'MFI']];
   const lsGet = (k, d) => { try { return localStorage.getItem(k) || d; } catch (e) { return d; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
   const fd = n => { const s = String(n); return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6)}`; };
   const fv = v => v >= 1e9 ? (v / 1e9).toFixed(2) + 'B' : v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(1) + 'K' : String(v);
   const sg = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
   const col = up => up ? 'var(--tr)' : 'var(--bl)';
-  const csCache = new WeakMap();
+  const f1 = v => v == null ? '–' : v.toFixed(1), f2 = v => v == null ? '–' : v.toFixed(2);
+  const csCache = new WeakMap(), indCache = new WeakMap();
   const maAt = (ser, n, i) => {
     if (i + 1 < n) return null;
     let cs = csCache.get(ser);
     if (!cs) { cs = [0]; ser.c.forEach(v => cs.push(cs[cs.length - 1] + v)); csCache.set(ser, cs); }
     return (cs[i + 1] - cs[i + 1 - n]) / n;
   };
+  /* 지표는 시리즈 전체로 한 번 계산해 둔다 (구간을 바꿔도 값이 같도록) */
+  function inds(ser) {
+    let c = indCache.get(ser); if (c) return c;
+    const n = ser.c.length, rsi = new Array(n).fill(null), mfi = new Array(n).fill(null);
+    let ag = 0, al = 0;                                           // RSI(14): 와일더 평활
+    for (let i = 1; i < n; i++) {
+      const d = ser.c[i] - ser.c[i - 1], g = Math.max(d, 0), l = Math.max(-d, 0);
+      if (i <= 14) { ag += g / 14; al += l / 14; if (i === 14) rsi[i] = al === 0 ? 100 : 100 - 100 / (1 + ag / al); }
+      else { ag = (ag * 13 + g) / 14; al = (al * 13 + l) / 14; rsi[i] = al === 0 ? 100 : 100 - 100 / (1 + ag / al); }
+    }
+    const ema = (arr, p, from) => { const out = new Array(arr.length).fill(null), k = 2 / (p + 1); let e = null;
+      for (let i = from; i < arr.length; i++) { e = e == null ? arr[i] : arr[i] * k + e * (1 - k); out[i] = e; } return out; };
+    const e12 = ema(ser.c, 12, 0), e26 = ema(ser.c, 26, 0);        // MACD(12,26,9)
+    const macd = ser.c.map((_, i) => i >= 25 ? e12[i] - e26[i] : null);
+    const sig = ema(macd.map(v => v == null ? 0 : v), 9, 25).map((v, i) => i >= 33 ? v : null);
+    const hist = macd.map((v, i) => v != null && sig[i] != null ? v - sig[i] : null);
+    const tp = ser.c.map((c, i) => (ser.h[i] + ser.l[i] + c) / 3);  // MFI(14)
+    for (let i = 14; i < n; i++) {
+      let pos = 0, neg = 0;
+      for (let j = i - 13; j <= i; j++) { const fl = tp[j] * ser.v[j]; if (tp[j] > tp[j - 1]) pos += fl; else if (tp[j] < tp[j - 1]) neg += fl; }
+      mfi[i] = neg === 0 ? (pos === 0 ? 50 : 100) : 100 - 100 / (1 + pos / neg);
+    }
+    c = {rsi, macd, sig, hist, mfi}; indCache.set(ser, c); return c;
+  }
   function ticks(lo, hi, n) {
     const raw = (hi - lo) / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), nm = raw / mag;
     const step = (nm <= 1 ? 1 : nm <= 2 ? 2 : nm <= 2.5 ? 2.5 : nm <= 5 ? 5 : 10) * mag, out = [];
@@ -1237,30 +1266,41 @@ const PX = (() => {
   }
 
   function build(el, S) {
-    let ma = {5: 0, 20: 1, 60: 1}; try { ma = Object.assign(ma, JSON.parse(lsGet('px_ma', '{}'))); } catch (e) {}
-    const st = {per: lsGet('px_per', '6M'), type: lsGet('px_type', 'candle'), ma};
+    let ma = {20: 1, 50: 1, 200: 1}; try { ma = Object.assign(ma, JSON.parse(lsGet('px_ma2', '{}'))); } catch (e) {}
+    let ind = {rsi: 0, macd: 0, mfi: 0}; try { ind = Object.assign(ind, JSON.parse(lsGet('px_ind', '{}'))); } catch (e) {}
+    const st = {per: lsGet('px_per', '6M'), type: lsGet('px_type', 'candle'), ma, ind};
     if (!PERIODS.some(p => p[0] === st.per)) st.per = '6M';
     const D = S.D, last = D.c.length - 1, prev = last > 0 ? D.c[last - 1] : D.c[last], dchg = (D.c[last] / prev - 1) * 100;
-    const dec0 = D.c[last] >= 100 ? 2 : D.c[last] >= 1 ? 2 : 3;
-    el.innerHTML = `<div class="px-head"><b>${D.c[last].toFixed(dec0)}</b><span class="chg" style="color:${col(dchg >= 0)}">${(D.c[last] - prev >= 0 ? '+' : '') + (D.c[last] - prev).toFixed(2)} (${sg(dchg)})</span><small>${fd(D.t[last])} 종가</small></div>
+    el.innerHTML = `<div class="px-head"><b>${D.c[last].toFixed(D.c[last] >= 1 ? 2 : 3)}</b><span class="chg" style="color:${col(dchg >= 0)}">${(D.c[last] - prev >= 0 ? '+' : '') + (D.c[last] - prev).toFixed(2)} (${sg(dchg)})</span><small>${fd(D.t[last])} 종가</small></div>
       <div class="px-info" id="px-info"></div>
       <div class="px-ctl" id="px-ctl">${PERIODS.map(p => `<button type="button" data-p="${p[0]}">${p[0]}</button>`).join('')}<span class="sp"></span><button type="button" class="ty" id="px-ty"></button></div>
-      <div class="px-ma" id="px-ma"></div><svg class="px-svg" id="px-svg" role="img" aria-label="주가 차트"></svg>`;
+      <div class="px-ma" id="px-ma"></div>
+      <div class="px-ind" id="px-ind"><span>보조지표</span>${INDS.map(([k, n]) => `<button type="button" data-i="${k}">${n}</button>`).join('')}</div>
+      <svg class="px-svg" id="px-svg" role="img" aria-label="주가 차트"></svg>`;
     const $q = id => el.querySelector('#' + id), svg = $q('px-svg');
     let view = null, selIdx = null;
 
+    function indText(kind, i, ser) {
+      const I = inds(ser);
+      if (kind === 'rsi') return `RSI(14)  ${f1(I.rsi[i])}`;
+      if (kind === 'mfi') return `MFI(14)  ${f1(I.mfi[i])}`;
+      return `MACD(12,26,9)  ${f2(I.macd[i])}  신호 ${f2(I.sig[i])}  히스토 ${f2(I.hist[i])}`;
+    }
     function info(k) {                               // k: 보이는 구간 안의 위치. null 이면 마지막 봉
       const {ser, i0, n} = view, i = i0 + (k == null ? n - 1 : k);
       const o = ser.o[i], h = ser.h[i], l = ser.l[i], c = ser.c[i], pc = i > 0 ? ser.c[i - 1] : o, ch = (c / pc - 1) * 100;
       $q('px-info').innerHTML = `<span>${fd(ser.t[i])}</span><span><em>시</em> ${o.toFixed(2)}</span><span><em>고</em> ${h.toFixed(2)}</span><span><em>저</em> ${l.toFixed(2)}</span><span><em>종</em> ${c.toFixed(2)}</span><b style="color:${col(ch >= 0)}">${sg(ch)}</b><span><em>거래량</em> ${fv(ser.v[i])}</span>`;
       $q('px-ma').innerHTML = MAS.map(([nn, cc]) => { const v = maAt(ser, nn, i); return `<button type="button" data-m="${nn}" class="${st.ma[nn] ? '' : 'off'}"><i style="background:${cc}"></i>MA${nn} ${v == null ? '–' : v.toFixed(2)}</button>`; }).join('');
-      $q('px-ma').querySelectorAll('button').forEach(b => b.onclick = () => { st.ma[b.dataset.m] = st.ma[b.dataset.m] ? 0 : 1; lsSet('px_ma', JSON.stringify(st.ma)); draw(); });
+      $q('px-ma').querySelectorAll('button').forEach(b => b.onclick = () => { st.ma[b.dataset.m] = st.ma[b.dataset.m] ? 0 : 1; lsSet('px_ma2', JSON.stringify(st.ma)); draw(); });
+      INDS.forEach(([kind]) => { const t = svg.querySelector('#px-t-' + kind); if (t) t.textContent = indText(kind, i, ser); });
     }
 
     function draw() {
-      const per = PERIODS.find(p => p[0] === st.per), ser = S[per[1]], total = ser.c.length, n = Math.min(per[2], total), i0 = total - n;
-      const W = Math.max(280, Math.floor(svg.getBoundingClientRect().width || svg.parentNode.clientWidth || 340)), H = 330;
-      const ML = 4, MR = 50, pT = 8, pB = 226, vT = 240, vB = 296, plotW = W - ML - MR, step = plotW / n, bw = Math.max(1, Math.min(14, step * 0.66));
+      const per = PERIODS.find(p => p[0] === st.per), ser = S[per[1]], total = ser.c.length, n = Math.min(per[2], total), i0 = total - n, I = inds(ser);
+      const panels = INDS.map(([k]) => k).filter(k => st.ind[k]);
+      const W = Math.max(280, Math.floor(svg.getBoundingClientRect().width || svg.parentNode.clientWidth || 340));
+      const ML = 4, MR = 50, pT = 8, pB = 226, vT = 240, vB = 282, PH = 66, PG = 10, plotW = W - ML - MR, step = plotW / n, bw = Math.max(1, Math.min(14, step * 0.66));
+      const bottom = vB + panels.length * (PH + PG), H = bottom + 26;
       let lo = Infinity, hi = -Infinity, vmax = 0;
       for (let i = i0; i < total; i++) {
         const a = st.type === 'candle' ? ser.l[i] : ser.c[i], b = st.type === 'candle' ? ser.h[i] : ser.c[i];
@@ -1272,14 +1312,12 @@ const PX = (() => {
       let s = '';
       tk.out.forEach(v => { s += `<line x1="${ML}" x2="${W - MR}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${W - MR + 6}" y="${(y(v) + 3.5).toFixed(1)}">${v.toFixed(tk.dec)}</text>`; });
       s += `<line x1="${ML}" x2="${W - MR}" y1="${vB}" y2="${vB}" stroke="var(--line)"/>`;
-      // x 축 날짜
       const nl = n > 60 ? 4 : 3;
       for (let q = 0; q < nl; q++) {
         const k = Math.round((n - 1) * (q + 0.5) / nl), t = String(ser.t[i0 + k]);
         const lab = per[1] === 'W' || n > 130 ? `${t.slice(2, 4)}-${t.slice(4, 6)}` : `${t.slice(4, 6)}-${t.slice(6)}`;
-        s += `<text x="${x(k).toFixed(1)}" y="${H - 14}" text-anchor="middle">${lab}</text>`;
+        s += `<text x="${x(k).toFixed(1)}" y="${bottom + 14}" text-anchor="middle">${lab}</text>`;
       }
-      // 거래량
       let vs = '', body = '', wick = '';
       for (let k = 0; k < n; k++) {
         const i = i0 + k, up = ser.c[i] >= ser.o[i], c = col(up), cx = x(k);
@@ -1290,43 +1328,62 @@ const PX = (() => {
           body += `<rect x="${(cx - bw / 2).toFixed(1)}" y="${Math.min(yo, yc).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, Math.abs(yo - yc)).toFixed(1)}" fill="${c}"/>`;
         }
       }
-      s += vs;
+      s += vs + `<text x="${ML + 2}" y="${vT + 9}" style="font-size:10px">거래량</text>`;
       const trendUp = ser.c[total - 1] >= ser.c[i0];
       if (st.type === 'line') {
         let d = ''; for (let k = 0; k < n; k++) d += `${k ? 'L' : 'M'}${x(k).toFixed(1)},${y(ser.c[i0 + k]).toFixed(1)}`;
         s += `<path d="${d}L${x(n - 1).toFixed(1)},${pB}L${x(0).toFixed(1)},${pB}Z" fill="${col(trendUp)}" opacity=".10"/><path d="${d}" fill="none" stroke="${col(trendUp)}" stroke-width="1.8" stroke-linejoin="round"/>`;
       } else s += wick + body;
-      MAS.forEach(([nn, cc]) => {
-        if (!st.ma[nn]) return;
-        let d = '', started = false;
-        for (let k = 0; k < n; k++) { const v = maAt(ser, nn, i0 + k); if (v == null) continue; d += `${started ? 'L' : 'M'}${x(k).toFixed(1)},${y(v).toFixed(1)}`; started = true; }
-        if (d) s += `<path d="${d}" fill="none" stroke="${cc}" stroke-width="1.3" stroke-linejoin="round"/>`;
-      });
-      // 기간 고가·저가 표시
+      const line = (arr, yf, color, wd) => {                       // null 은 건너뛰며 선을 잇는다
+        let d = '', on = false;
+        for (let k = 0; k < n; k++) { const v = arr(i0 + k); if (v == null) { on = false; continue; } d += `${on ? 'L' : 'M'}${x(k).toFixed(1)},${yf(v).toFixed(1)}`; on = true; }
+        return d ? `<path d="${d}" fill="none" stroke="${color}" stroke-width="${wd}" stroke-linejoin="round"/>` : '';
+      };
+      MAS.forEach(([nn, cc]) => { if (st.ma[nn]) s += line(i => maAt(ser, nn, i), y, cc, 1.3); });
       let kh = 0, kl = 0;
       for (let k = 1; k < n; k++) { if (ser.h[i0 + k] >= ser.h[i0 + kh]) kh = k; if (ser.l[i0 + k] <= ser.l[i0 + kl]) kl = k; }
       const tag = (k, v, yy, dy) => { const right = k > n * 0.6; return `<text x="${(x(k) + (right ? -4 : 4)).toFixed(1)}" y="${(yy + dy).toFixed(1)}" text-anchor="${right ? 'end' : 'start'}" style="fill:var(--text-2);font-weight:600">${v.toFixed(2)}</text>`; };
       if (st.type === 'candle') s += tag(kh, ser.h[i0 + kh], y(ser.h[i0 + kh]), -3) + tag(kl, ser.l[i0 + kl], y(ser.l[i0 + kl]), 11);
-      // 마지막 종가선과 가격표
       const lc = ser.c[total - 1], lu = ser.c[total - 1] >= ser.o[total - 1];
       s += `<line x1="${ML}" x2="${W - MR}" y1="${y(lc).toFixed(1)}" y2="${y(lc).toFixed(1)}" stroke="${col(lu)}" stroke-dasharray="3 3" opacity=".7"/>` +
            `<rect x="${W - MR + 1}" y="${(y(lc) - 8).toFixed(1)}" width="${MR - 2}" height="16" rx="4" fill="${col(lu)}"/><text x="${W - MR + 5}" y="${(y(lc) + 3.5).toFixed(1)}" style="fill:#fff;font-weight:700">${lc.toFixed(2)}</text>`;
+      // 보조지표 패널
+      panels.forEach((kind, pi) => {
+        const top = vB + PG + pi * (PH + PG) + 2, t0 = top + 16, t1 = top + PH - 4, hgt = t1 - t0;
+        s += `<line x1="${ML}" x2="${W - MR}" y1="${top + PH + 2}" y2="${top + PH + 2}" stroke="var(--line)"/><text id="px-t-${kind}" x="${ML + 2}" y="${top + 9}" style="fill:var(--text-2);font-size:10.5px;font-weight:600"></text>`;
+        if (kind === 'rsi' || kind === 'mfi') {
+          const arr = I[kind], yy = v => t1 - v / 100 * hgt, hl = kind === 'rsi' ? [30, 70] : [20, 80], c = kind === 'rsi' ? '#8b5cf6' : '#0ea5a5';
+          s += `<rect x="${ML}" y="${yy(hl[1]).toFixed(1)}" width="${plotW}" height="${(yy(hl[0]) - yy(hl[1])).toFixed(1)}" fill="${c}" opacity=".07"/>`;
+          hl.forEach(v => s += `<line x1="${ML}" x2="${W - MR}" y1="${yy(v).toFixed(1)}" y2="${yy(v).toFixed(1)}" stroke="var(--text-3)" stroke-dasharray="3 3" opacity=".6"/><text x="${W - MR + 6}" y="${(yy(v) + 3.5).toFixed(1)}">${v}</text>`);
+          s += line(i => arr[i], yy, c, 1.5);
+        } else {
+          let mn = Infinity, mx = -Infinity;
+          for (let i = i0; i < total; i++) for (const v of [I.macd[i], I.sig[i], I.hist[i]]) if (v != null) { if (v < mn) mn = v; if (v > mx) mx = v; }
+          if (!isFinite(mn)) { mn = -1; mx = 1; }
+          const m0 = Math.max(Math.abs(mn), Math.abs(mx)) * 1.08 || 1, yy = v => t0 + (m0 - v) / (2 * m0) * hgt, zy = yy(0);
+          s += `<line x1="${ML}" x2="${W - MR}" y1="${zy.toFixed(1)}" y2="${zy.toFixed(1)}" stroke="var(--text-3)" stroke-dasharray="3 3" opacity=".6"/><text x="${W - MR + 6}" y="${(zy + 3.5).toFixed(1)}">0</text>`;
+          for (let k = 0; k < n; k++) { const v = I.hist[i0 + k]; if (v == null) continue; const yv = yy(v);
+            s += `<rect x="${(x(k) - bw / 2).toFixed(1)}" y="${Math.min(yv, zy).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0.5, Math.abs(yv - zy)).toFixed(1)}" fill="${col(v >= 0)}" opacity=".6"/>`; }
+          s += line(i => I.macd[i], yy, '#3b82f6', 1.3) + line(i => I.sig[i], yy, '#f59e0b', 1.3);
+        }
+      });
       s += `<g id="px-cx" pointer-events="none"></g>`;
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('height', H); svg.innerHTML = s;
-      view = {ser, i0, n, W, ML, MR, step, y, x, pB, vB, H};
+      view = {ser, i0, n, W, ML, MR, step, y, x, pB, bottom, H};
       el.querySelectorAll('#px-ctl [data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === st.per));
+      el.querySelectorAll('#px-ind [data-i]').forEach(b => b.classList.toggle('on', !!st.ind[b.dataset.i]));
       $q('px-ty').textContent = st.type === 'candle' ? '캔들' : '라인';
       info(selIdx != null && selIdx < n ? selIdx : null);
       if (selIdx != null && selIdx < n) cross(selIdx);
     }
 
     function cross(k) {
-      const {ser, i0, W, ML, MR, y, x, pB, H} = view, i = i0 + k, cx = x(k).toFixed(1), cy = y(ser.c[i]).toFixed(1), up = ser.c[i] >= ser.o[i];
+      const {ser, i0, W, ML, MR, y, x, bottom} = view, i = i0 + k, cx = x(k).toFixed(1), cy = y(ser.c[i]).toFixed(1), up = ser.c[i] >= ser.o[i];
       const t = String(ser.t[i]), lab = `${t.slice(0, 4)}-${t.slice(4, 6)}-${t.slice(6)}`, lw = 66, lx = Math.min(Math.max(x(k) - lw / 2, ML), W - MR - lw);
-      $q('px-cx').innerHTML = `<line x1="${cx}" x2="${cx}" y1="8" y2="296" stroke="var(--text-3)" stroke-dasharray="3 3"/><line x1="${ML}" x2="${W - MR}" y1="${cy}" y2="${cy}" stroke="var(--text-3)" stroke-dasharray="3 3"/>` +
+      $q('px-cx').innerHTML = `<line x1="${cx}" x2="${cx}" y1="8" y2="${bottom}" stroke="var(--text-3)" stroke-dasharray="3 3"/><line x1="${ML}" x2="${W - MR}" y1="${cy}" y2="${cy}" stroke="var(--text-3)" stroke-dasharray="3 3"/>` +
         `<circle cx="${cx}" cy="${cy}" r="3.4" fill="${col(up)}" stroke="var(--surface)" stroke-width="1.5"/>` +
         `<rect x="${W - MR + 1}" y="${(y(ser.c[i]) - 8).toFixed(1)}" width="${MR - 2}" height="16" rx="4" fill="var(--text)"/><text x="${W - MR + 5}" y="${(y(ser.c[i]) + 3.5).toFixed(1)}" style="fill:var(--surface);font-weight:700">${ser.c[i].toFixed(2)}</text>` +
-        `<rect x="${lx.toFixed(1)}" y="${H - 28}" width="${lw}" height="16" rx="4" fill="var(--text)"/><text x="${(lx + lw / 2).toFixed(1)}" y="${H - 16.5}" text-anchor="middle" style="fill:var(--surface);font-weight:700">${lab}</text>`;
+        `<rect x="${lx.toFixed(1)}" y="${bottom + 3}" width="${lw}" height="16" rx="4" fill="var(--text)"/><text x="${(lx + lw / 2).toFixed(1)}" y="${bottom + 14.5}" text-anchor="middle" style="fill:var(--surface);font-weight:700">${lab}</text>`;
     }
     function pick(e) {
       if (!view) return;
@@ -1338,6 +1395,7 @@ const PX = (() => {
     svg.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || e.buttons || e.pointerType === 'touch' || e.pointerType === 'pen') pick(e); });
     svg.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') { selIdx = null; const c = $q('px-cx'); if (c) c.innerHTML = ''; if (view) info(null); } });
     el.querySelectorAll('#px-ctl [data-p]').forEach(b => b.onclick = () => { st.per = b.dataset.p; lsSet('px_per', st.per); selIdx = null; draw(); });
+    el.querySelectorAll('#px-ind [data-i]').forEach(b => b.onclick = () => { st.ind[b.dataset.i] = st.ind[b.dataset.i] ? 0 : 1; lsSet('px_ind', JSON.stringify(st.ind)); draw(); });
     $q('px-ty').onclick = () => { st.type = st.type === 'candle' ? 'line' : 'candle'; lsSet('px_type', st.type); draw(); };
     draw();
     if (window.ResizeObserver) { let w0 = svg.getBoundingClientRect().width; new ResizeObserver(() => { const w = svg.getBoundingClientRect().width; if (Math.abs(w - w0) > 2 && el.isConnected) { w0 = w; draw(); } }).observe(el); }
