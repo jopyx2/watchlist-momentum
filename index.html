@@ -1279,7 +1279,7 @@ const PX = (() => {
       <div class="px-ma" id="px-ma"></div>
       <div class="px-ind" id="px-ind"><span>보조지표</span>${INDS.map(([k, n]) => `<button type="button" data-i="${k}">${n}</button>`).join('')}</div>
       <svg class="px-svg" id="px-svg" role="img" aria-label="주가 차트"></svg>
-      <div class="px-hint">좌우로 끌면 그 구간이 확대됩니다 · 두 번 누르면 원래대로</div>`;
+      <div class="px-hint">${window.matchMedia && matchMedia('(pointer: coarse)').matches ? '한 손가락으로 짚어 보기 · 두 손가락으로 확대·축소 · 두 번 누르면 원래대로' : '좌우로 끌면 그 구간이 확대됩니다 · 더블클릭하면 원래대로'}</div>`;
     const $q = id => el.querySelector('#' + id), svg = $q('px-svg');
     let view = null, selIdx = null, zoom = null;        // zoom: {a, b} = 확대한 구간의 시작·끝 봉 번호 (시리즈 전체 기준)
 
@@ -1395,25 +1395,63 @@ const PX = (() => {
       const k = Math.max(0, Math.min(view.n - 1, Math.floor((px - view.ML) / view.step)));
       selIdx = k; cross(k); info(k);
     }
-    let drag = null, lastTap = 0;
+    let drag = null, lastTap = 0, pinch = null, pinched = false, raf = 0;
+    const touches = new Map();                                     // 터치: 지금 화면에 닿아 있는 손가락들
     const kOf = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) * (view.W / r.width); return {px, k: Math.max(0, Math.min(view.n - 1, Math.floor((px - view.ML) / view.step)))}; };
     const resetZoom = () => { if (!zoom) return; zoom = null; selIdx = null; draw(); };
+    function startPinch() {
+      const [p, q] = [...touches.values()], r = svg.getBoundingClientRect(), mid = ((p.x + q.x) / 2 - r.left) * (view.W / r.width);
+      pinch = {d0: Math.hypot(p.x - q.x, p.y - q.y) || 1, span0: view.n, kc: view.i0 + (mid - view.ML) / view.step - 0.5};   // 두 손가락 가운데에 있던 봉
+    }
+    function pinchStep() {                                         // 손가락 간격으로 보이는 봉 수를, 가운데 위치로 이동을 정한다
+      raf = 0; if (!pinch || !view || touches.size < 2) return;
+      const [p, q] = [...touches.values()], d = Math.hypot(p.x - q.x, p.y - q.y) || 1, r = svg.getBoundingClientRect();
+      const mid = ((p.x + q.x) / 2 - r.left) * (view.W / r.width), plotW = view.W - view.ML - view.MR, tot = view.ser.c.length;
+      const span = Math.max(5, Math.min(tot, Math.round(pinch.span0 * pinch.d0 / d)));
+      let a = Math.round(pinch.kc - (mid - view.ML) / (plotW / span) + 0.5);
+      a = Math.max(0, Math.min(tot - span, a));
+      zoom = {a, b: a + span - 1}; selIdx = null; draw();
+    }
     svg.addEventListener('pointerdown', e => {
       if (!view) return;
-      const c = kOf(e); drag = {id: e.pointerId, x0: e.clientX, px0: c.px, k0: c.k, on: false};
+      if (e.pointerType === 'mouse') {                             // PC: 누른 채 끌면 구간 선택
+        const c = kOf(e); drag = {id: e.pointerId, x0: e.clientX, px0: c.px, k0: c.k, on: false};
+        try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+        return;
+      }
+      touches.set(e.pointerId, {x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY});   // 스마트폰: 한 손가락은 십자선, 두 손가락은 확대·축소
       try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+      if (touches.size === 2) { pinched = true; startPinch(); }
+      else if (touches.size === 1) { pinched = false; pick(e); }
     });
     svg.addEventListener('pointermove', e => {
       if (!view) return;
-      if (drag && drag.id === e.pointerId) {                       // 누른 채로 좌우로 끄는 중: 구간 선택
+      if (e.pointerType !== 'mouse') {
+        const t = touches.get(e.pointerId); if (!t) return;
+        t.x = e.clientX; t.y = e.clientY;
+        if (pinch && touches.size >= 2) { if (!raf) { raf = 1; setTimeout(pinchStep, 16); } }
+        else if (touches.size === 1 && !pinched) pick(e);
+        return;
+      }
+      if (drag && drag.id === e.pointerId) {
         if (!drag.on && Math.abs(e.clientX - drag.x0) > 8) drag.on = true;
         if (drag.on) { const c = kOf(e), a = Math.min(drag.px0, c.px), b = Math.max(drag.px0, c.px);
           $q('px-sel').innerHTML = `<rect x="${a.toFixed(1)}" y="8" width="${(b - a).toFixed(1)}" height="${view.bottom - 8}" fill="var(--text)" opacity=".09"/><line x1="${a.toFixed(1)}" x2="${a.toFixed(1)}" y1="8" y2="${view.bottom}" stroke="var(--text-2)"/><line x1="${b.toFixed(1)}" x2="${b.toFixed(1)}" y1="8" y2="${view.bottom}" stroke="var(--text-2)"/>`; }
         return;
       }
-      if (e.pointerType === 'mouse') pick(e);                      // 마우스를 올리면 십자선
+      pick(e);                                                     // 마우스를 올리면 십자선
     });
     const end = (e, cancel) => {
+      if (e.pointerType !== 'mouse') {
+        const t = touches.get(e.pointerId); touches.delete(e.pointerId);
+        if (touches.size < 2) pinch = null;
+        const was = pinched; if (!touches.size) pinched = false;
+        if (cancel || !t || was || !view) return;
+        if (Math.hypot(e.clientX - t.x0, e.clientY - t.y0) <= 8) {   // 짧게 눌렀다 뗌: 빠르게 두 번이면 확대 해제
+          const now = Date.now(); if (zoom && now - lastTap < 320) { lastTap = 0; resetZoom(); } else lastTap = now;
+        }
+        return;
+      }
       if (!drag || drag.id !== e.pointerId) return;
       const d = drag; drag = null; const sel = $q('px-sel'); if (sel) sel.innerHTML = '';
       if (cancel || !view) return;
@@ -1422,9 +1460,7 @@ const PX = (() => {
         if (kb - ka + 1 >= 5) { zoom = {a: view.i0 + ka, b: view.i0 + kb}; selIdx = null; draw(); }
         return;
       }
-      const now = Date.now();                                      // 짧게 누름: 십자선, 빠르게 두 번이면 확대 해제
-      if (zoom && now - lastTap < 320) { lastTap = 0; resetZoom(); return; }
-      lastTap = now; pick(e);
+      pick(e);
     };
     svg.addEventListener('pointerup', e => end(e, false));
     svg.addEventListener('pointercancel', e => end(e, true));
