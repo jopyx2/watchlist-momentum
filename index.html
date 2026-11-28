@@ -1279,7 +1279,7 @@ const PX = (() => {
       <div class="px-ma" id="px-ma"></div>
       <div class="px-ind" id="px-ind"><span>보조지표</span>${INDS.map(([k, n]) => `<button type="button" data-i="${k}">${n}</button>`).join('')}</div>
       <svg class="px-svg" id="px-svg" role="img" aria-label="주가 차트"></svg>
-      <div class="px-hint">${window.matchMedia && matchMedia('(pointer: coarse)').matches ? '한 손가락으로 짚어 보기 · 두 손가락으로 확대·축소 · 두 번 누르면 원래대로' : '좌우로 끌면 그 구간이 확대됩니다 · 더블클릭하면 원래대로'}</div>`;
+      <div class="px-hint">${window.matchMedia && matchMedia('(pointer: coarse)').matches ? '터치하면 십자선 · 길게 누르고 끌면 시세 따라다님 · 쓸면 이동 · 두 손가락으로 확대·축소' : '좌우로 끌면 그 구간이 확대됩니다 · 더블클릭하면 원래대로'}</div>`;
     const $q = id => el.querySelector('#' + id), svg = $q('px-svg');
     let view = null, selIdx = null, zoom = null;        // zoom: {a, b} = 확대한 구간의 시작·끝 봉 번호 (시리즈 전체 기준)
 
@@ -1395,10 +1395,15 @@ const PX = (() => {
       const k = Math.max(0, Math.min(view.n - 1, Math.floor((px - view.ML) / view.step)));
       selIdx = k; cross(k); info(k);
     }
-    let drag = null, lastTap = 0, pinch = null, pinched = false, raf = 0;
+    let drag = null, lastTap = 0, pinch = null, pinched = false, raf = 0, holdT = 0;
     const touches = new Map();                                     // 터치: 지금 화면에 닿아 있는 손가락들
     const kOf = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) * (view.W / r.width); return {px, k: Math.max(0, Math.min(view.n - 1, Math.floor((px - view.ML) / view.step)))}; };
     const resetZoom = () => { if (!zoom) return; zoom = null; selIdx = null; draw(); };
+    function panTo(t, e) {                                         // 한 손가락으로 쓸어서 같은 폭의 구간을 과거·최근으로 옮긴다
+      const r = svg.getBoundingClientRect(), stepPx = view.step * (r.width / view.W), tot = view.ser.c.length;
+      const a = Math.max(0, Math.min(tot - t.span, t.a0 - Math.round((e.clientX - t.x0) / stepPx)));
+      if (!zoom || zoom.a !== a) { zoom = {a, b: a + t.span - 1}; selIdx = null; draw(); }
+    }
     function startPinch() {
       const [p, q] = [...touches.values()], r = svg.getBoundingClientRect(), mid = ((p.x + q.x) / 2 - r.left) * (view.W / r.width);
       pinch = {d0: Math.hypot(p.x - q.x, p.y - q.y) || 1, span0: view.n, kc: view.i0 + (mid - view.ML) / view.step - 0.5};   // 두 손가락 가운데에 있던 봉
@@ -1419,10 +1424,13 @@ const PX = (() => {
         try { svg.setPointerCapture(e.pointerId); } catch (err) {}
         return;
       }
-      touches.set(e.pointerId, {x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY});   // 스마트폰: 한 손가락은 십자선, 두 손가락은 확대·축소
+      touches.set(e.pointerId, {x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, mode: 'tap', a0: view.i0, span: view.n});   // 스마트폰: 한 손가락은 십자선, 두 손가락은 확대·축소
       try { svg.setPointerCapture(e.pointerId); } catch (err) {}
-      if (touches.size === 2) { pinched = true; startPinch(); }
-      else if (touches.size === 1) { pinched = false; pick(e); }
+      if (touches.size === 2) { pinched = true; clearTimeout(holdT); startPinch(); }
+      else if (touches.size === 1) {
+        pinched = false; pick(e); clearTimeout(holdT);
+        const t0 = touches.get(e.pointerId); holdT = setTimeout(() => { if (t0.mode === 'tap') t0.mode = 'scrub'; }, 350);   // 길게 누르면 십자선이 손가락을 따라다닌다
+      }
     });
     svg.addEventListener('pointermove', e => {
       if (!view) return;
@@ -1430,7 +1438,11 @@ const PX = (() => {
         const t = touches.get(e.pointerId); if (!t) return;
         t.x = e.clientX; t.y = e.clientY;
         if (pinch && touches.size >= 2) { if (!raf) { raf = 1; setTimeout(pinchStep, 16); } }
-        else if (touches.size === 1 && !pinched) pick(e);
+        else if (touches.size === 1 && !pinched) {
+          if (t.mode === 'tap' && Math.abs(e.clientX - t.x0) > 8) { t.mode = 'pan'; clearTimeout(holdT); }   // 바로 쓸면 이동, 길게 누른 뒤면 십자선
+          if (t.mode === 'scrub') pick(e);
+          else if (t.mode === 'pan') panTo(t, e);
+        }
         return;
       }
       if (drag && drag.id === e.pointerId) {
@@ -1443,11 +1455,11 @@ const PX = (() => {
     });
     const end = (e, cancel) => {
       if (e.pointerType !== 'mouse') {
-        const t = touches.get(e.pointerId); touches.delete(e.pointerId);
+        const t = touches.get(e.pointerId); touches.delete(e.pointerId); clearTimeout(holdT);
         if (touches.size < 2) pinch = null;
         const was = pinched; if (!touches.size) pinched = false;
         if (cancel || !t || was || !view) return;
-        if (Math.hypot(e.clientX - t.x0, e.clientY - t.y0) <= 8) {   // 짧게 눌렀다 뗌: 빠르게 두 번이면 확대 해제
+        if (t.mode === 'tap' && Math.hypot(e.clientX - t.x0, e.clientY - t.y0) <= 8) {   // 짧게 눌렀다 뗌: 빠르게 두 번이면 확대 해제
           const now = Date.now(); if (zoom && now - lastTap < 320) { lastTap = 0; resetZoom(); } else lastTap = now;
         }
         return;
