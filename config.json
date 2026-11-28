@@ -18,7 +18,10 @@
     {"ticker": "TSM", "name": "TSMC"},
     {"ticker": "AVGO", "name": "브로드컴"},
     {"ticker": "ETN", "name": "이튼"},
-    {"ticker": "MSFT", "name": "MSFT"}
+    {"ticker": "MSFT", "name": "MSFT"},
+    {"ticker": "JNJ", "name": "존슨앤존슨"},
+    {"ticker": "UNH", "name": "유나이티드헬스"},
+    {"ticker": "AMGN", "name": "암젠"}
   ],
   "sectors": [
     {"ticker": "SPY", "name": "S&P 500", "style": "시장"},
@@ -44,6 +47,7 @@
     {"ticker": "SOXX", "name": "반도체", "style": "성장"},
     {"ticker": "SMH", "name": "반도체(대형)", "style": "성장"},
     {"ticker": "IGV", "name": "소프트웨어", "style": "성장"},
+    {"ticker": "XBI", "name": "바이오(중소형)", "style": "성장"},
     {"ticker": "ITA", "name": "방산", "style": "테마"},
     {"ticker": "JETS", "name": "항공", "style": "테마"},
     {"ticker": "UFO", "name": "우주", "style": "테마"},
