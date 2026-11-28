@@ -272,6 +272,8 @@ def build_app_data(res: dict) -> dict:
             rec = {"t": it["ticker"], "n": it["name"], "g": it["label"], "w1": it.get("w1")}
             if it.get("style"):
                 rec["st"] = it["style"]
+            if it.get("theme"):
+                rec["th"] = it["theme"]
             if it["plotted"]:
                 st = pace_state(it["quad"], it["pace"])
                 rec.update(h=[[p[0], p[1]] for p in it["pts"]], x1=it["x1"], x3=it["x3"], c=it["c"], pace=it["pace"],
@@ -331,7 +333,7 @@ def load_items(cfg: dict) -> list[dict]:
                 continue
             seen.add(sym)
             items.append({"kind": kind, "ticker": w["ticker"].strip().upper(), "yf": sym,
-                          "name": w.get("name") or w["ticker"], "label": w.get("group") or label, "style": w.get("style", "")})
+                          "name": w.get("name") or w["ticker"], "label": w.get("group") or label, "style": w.get("style", ""), "theme": w.get("theme", "")})
     return items
 
 

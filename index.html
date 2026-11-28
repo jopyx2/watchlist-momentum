@@ -435,6 +435,14 @@ header .asof{margin-top:8px}
 .wl-form.sec{grid-template-columns:1fr 1.3fr 82px auto}
 .wl-form select,.wl-style{min-width:0;font:inherit;font-size:13px;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 6px}
 .wl-row:has(.wl-style){grid-template-columns:1fr 76px 44px;gap:0 6px}
+.wl-row:has(.wl-theme){grid-template-columns:1fr 64px 44px;gap:0 6px}
+.wl-row:has(.wl-style):has(.wl-theme){grid-template-columns:1fr 76px 64px 44px;gap:0 5px}
+.wl-theme{min-width:0;font:inherit;padding:7px 4px;font-size:12.5px;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.thd{display:inline-block;width:6px;height:6px;border-radius:50%;margin-left:5px;vertical-align:2px;flex:none}
+.thd[data-d=h]{background:#1D9E75} .thd[data-d=n]{background:#BA7517}
+tspan.thdt{font-size:7px;font-weight:400} tspan.thdt[data-d=h]{fill:#1D9E75} tspan.thdt[data-d=n]{fill:#BA7517}
+.thlg{display:flex;gap:14px;font-size:11.5px;color:var(--text-3);padding:2px 4px 10px}
+.thlg .thd{margin:0 5px 0 0}
 .wl-style{padding:7px 4px;font-size:12.5px}
 </style>
 </head>
@@ -481,6 +489,14 @@ let mode = 'watch';
 const curItems = () => mode === 'sector' ? ((D.sectors || {}).items || []) : D.items;
 const HOLD_LABEL = 'ETF Holdings';       // 버튼 이름: 나중에 'Holdings' 같은 용어로 바꿀 때 여기만 고치면 된다
 const STYLE = {시장: 'mk', 가치: 'va', 성장: 'gr', 소형: 'sm', 중형: 'md', 원자재: 'co', 테마: 'th'};
+const THEME = {헬스: 'h', 내수: 'n'};
+const thDot = it => it && it.th && THEME[it.th] ? `<i class="thd" data-d="${THEME[it.th]}" title="${it.th}"></i>` : '';
+const thTsp = it => it && it.th && THEME[it.th] ? `<tspan class="thdt" data-d="${THEME[it.th]}" dx="3">●</tspan>` : '';
+function themeLegend() {
+  const has = k => curItems().some(i => i.th === k);
+  const parts = [['헬스', '헬스케어·바이오'], ['내수', '내수']].filter(([k]) => has(k)).map(([k, t]) => `<span><i class="thd" data-d="${THEME[k]}"></i>${t}</span>`);
+  return parts.length ? `<div class="thlg" aria-label="테마 점 안내">${parts.join('')}</div>` : '';
+}
 const sAttr = it => it.st && STYLE[it.st] ? ` data-s="${STYLE[it.st]}" title="${it.st}"` : '';
 
 /* ---------- 데이터 ---------- */
@@ -536,12 +552,12 @@ function glyph(it) {
 function row(it) {
   const mark = it.sig === 'up' ? '<span class="mark up">▲</span>' : it.sig === 'dn' ? '<span class="mark dn">▼</span>' : '';
   if (!it.h) return `<button class="row" data-t="${it.t}"><svg class="gl" viewBox="0 0 44 44"><rect width="44" height="44" rx="12" fill="var(--surface-2)"/></svg>
-    <div class="id"><span class="tk"${sAttr(it)}>${it.t}</span><span class="nm">${it.n}</span><div class="st">상장 3개월 미만</div></div>
+    <div class="id"><span class="tk"${sAttr(it)}>${it.t}</span>${thDot(it)}<span class="nm">${it.n}</span><div class="st">상장 3개월 미만</div></div>
     <span class="n ${cls(it.x1m)}">${fp(it.x1m)}</span><span class="n" style="color:var(--text-3)">—</span></button>`;
   const flow = it.prev && it.prev !== it.quad ? `${QSHORT[it.prev]}→${QSHORT[it.quad]}` : '';
   const st = stateText(it) || flow;      // 이동 경로는 왼쪽 그림이 보여주므로, 상승·하락 지속 줄에는 상태만 쓴다
   return `<button class="row" data-t="${it.t}">${glyph(it)}
-    <div class="id"><span class="tk"${sAttr(it)}>${it.t}</span><span class="nm">${it.n}</span>${mark}<div class="st ${it.turn ? 'bad' : ''}">${st || '&nbsp;'}</div></div>
+    <div class="id"><span class="tk"${sAttr(it)}>${it.t}</span>${thDot(it)}<span class="nm">${it.n}</span>${mark}<div class="st ${it.turn ? 'bad' : ''}">${st || '&nbsp;'}</div></div>
     <span class="n ${cls(it.x1)}">${fp(it.x1)}</span><span class="n ${cls(it.x3)}">${fp(it.x3)}</span></button>`;
 }
 
@@ -557,11 +573,11 @@ function renderList() {
   const all = curItems(), plotted = all.filter(i => i.h), short = all.filter(i => !i.h);
   const by = q => plotted.filter(i => i.quad === q).sort((a, b) => b.pace - a.pace);
   const ups = plotted.filter(i => i.sig === 'up'), dns = plotted.filter(i => i.sig === 'dn'), turns = plotted.filter(i => i.turn);
-  const chips = (a, tag) => a.length ? a.map(i => `<span><b${i.st ? ' class="tk"' + sAttr(i) : ''} data-t="${i.t}">${i.t}</b>${tag ? `<small>${i.turn}</small>` : ''}</span>`).join('') : '<span class="none">없음</span>';
+  const chips = (a, tag) => a.length ? a.map(i => `<span><b${i.st ? ' class="tk"' + sAttr(i) : ''} data-t="${i.t}">${i.t}</b>${thDot(i)}${tag ? `<small>${i.turn}</small>` : ''}</span>`).join('') : '<span class="none">없음</span>';
   const q = k => `<em class="q ${k}">${QN[k]}</em>`;
   const n = k => by(k).length;
   // 신호 이름(상승 진입·하락 진입·꺾임)은 그대로 두고, 아래 그룹 이름과 같은 말로 풀어 쓴다
-  let html = (mode === 'sector' ? sectorBrief() : '') + `<section class="brief" aria-label="이번 주 변화">
+  let html = (mode === 'sector' ? sectorBrief() : '') + themeLegend() + `<section class="brief" aria-label="이번 주 변화">
     <div class="brief-row up"><span class="k">▲ 상승 진입</span><span class="v">${chips(ups)}</span><div class="cap"><b>3주</b> 안에 ${q('br')} → 지금 ${q('tr')}</div></div>
     <div class="brief-row dn"><span class="k">▼ 하락 진입</span><span class="v">${chips(dns)}</span><div class="cap"><b>3주</b> 안에 ${q('tl')} → 지금 ${q('bl')}</div></div>
     <div class="brief-row turn"><span class="k">🔻 꺾임</span><span class="v">${chips(turns, true)}</span><div class="cap">지난주 ${q('br')}·${q('tr')} → 이번 주 ${q('bl')}</div></div>
@@ -744,7 +760,7 @@ function paint(svg, list, dom, W, H, uid){
     if(Math.hypot(chosen.lx - px, chosen.ly - py) > 14){
       s += `<line class="leader" x1="${px}" y1="${py}" x2="${chosen.lx}" y2="${chosen.ly}"/>`;
     }
-    s += `<text class="pt-label" x="${chosen.lx}" y="${chosen.ly}" text-anchor="${chosen.anchor}">${p.t}</text></g>`;
+    s += `<text class="pt-label" x="${chosen.lx}" y="${chosen.ly}" text-anchor="${chosen.anchor}">${p.t}${thTsp(p)}</text></g>`;
   });
   s += `</g><g class="hl" pointer-events="none" clip-path="url(#cp-${uid})"></g>`;
   svg.innerHTML = s;
@@ -1078,7 +1094,7 @@ return {makeBoard};
 })();
 
 function renderChartPC() {
-  const list = curItems().map(i => i.h ? {t: i.t, n: i.n, s: i.g, h: i.h} : {t: i.t, n: i.n, s: i.g, h: null, x1m: i.x1m});
+  const list = curItems().map(i => i.h ? {t: i.t, n: i.n, s: i.g, h: i.h, th: i.th} : {t: i.t, n: i.n, s: i.g, h: null, x1m: i.x1m, th: i.th});
   $('main').innerHTML = `<section class="pcpanel pcchart"><div class="chart-body">
     <div id="pc-chart"></div>
     <div class="chart-side"><div class="chart-legend" id="pc-legend"></div><div class="pick" id="pc-pick" aria-live="polite"></div>
@@ -1149,7 +1165,7 @@ function quadSVG(items, opt) {
       if (b.x1 >= m.l && b.x2 <= W - m.r && b.y1 >= m.t && b.y2 <= H - m.b && !hit(b)) { pick = c; boxes.push(b); break; }
     }
     s += `<g class="pt" data-t="${i.t}" opacity="${dim(i)}">${dot}<circle cx="${cx}" cy="${cy}" r="15" fill="transparent"/>` +
-      `<text x="${cx + pick[0]}" y="${cy + pick[1]}" font-size="10.5" font-weight="${i.sig ? 700 : 500}" fill="var(--text)" text-anchor="${pick[2]}">${i.t}</text></g>`;
+      `<text x="${cx + pick[0]}" y="${cy + pick[1]}" font-size="10.5" font-weight="${i.sig ? 700 : 500}" fill="var(--text)" text-anchor="${pick[2]}">${i.t}${thTsp(i)}</text></g>`;
   });
   return s + '</svg>';
 }
@@ -1166,7 +1182,7 @@ function renderChartMobile() {
 /* ---------- 상세 시트 ---------- */
 function openSheet(t, noPush) {
   const i = curItems().concat((D.sectors || {}).items || []).find(x => x.t === t); if (!i) return;
-  let html = `<div class="sheet-in"><div class="sheet-top"><button type="button" class="sheet-back" id="sheet-back" aria-label="뒤로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2 class="sheet-h"><span class="tk"${sAttr(i)}>${i.t}</span><span class="nm" style="font-size:14px">${i.n}</span></h2></div><div class="dcard">`;
+  let html = `<div class="sheet-in"><div class="sheet-top"><button type="button" class="sheet-back" id="sheet-back" aria-label="뒤로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2 class="sheet-h"><span class="tk"${sAttr(i)}>${i.t}</span>${thDot(i)}<span class="nm" style="font-size:14px">${i.n}</span></h2></div><div class="dcard">`;
   if (!i.h) {
     html += `<p style="color:var(--text-2)">상장 3개월 미만이라 3개월 수익률과 궤적이 없습니다.<br>1개월 수익률 <b class="${cls(i.x1m)}">${fp(i.x1m)}</b></p>`;
   } else {
@@ -1213,7 +1229,7 @@ const KINDS = {
 };
 const STYLES = ['시장', '가치', '성장', '소형', '중형', '원자재', '테마'];
 let CFG = null, WLS = {watch: null, sector: null}, wlMsg = null, wlBusy = false, EK = 'watch';
-const normW = (k, w) => k === 'sector' ? {ticker: w.ticker, name: w.name || w.ticker, style: w.style || '테마'} : {ticker: w.ticker, name: w.name || w.ticker};
+const normW = (k, w) => Object.assign(k === 'sector' ? {ticker: w.ticker, name: w.name || w.ticker, style: w.style || '테마'} : {ticker: w.ticker, name: w.name || w.ticker}, w.theme ? {theme: w.theme} : {});
 const cfgList = k => ((CFG && CFG[KINDS[k].key]) || []).map(w => normW(k, w));
 
 async function loadCfg() {
@@ -1296,8 +1312,9 @@ async function renderEdit(k) {
   html += `<h2 class="grp"><i style="background:var(--text-3)"></i>현재 ${K.title} <span>${WL.length}</span></h2><div class="rows">` +
     (WL.length ? WL.map(w => {
       const [kk, label] = wlStatus(k, w.ticker);
-      return `<div class="wl-row"><div class="id"><span class="tk"${sec ? ` data-s="${STYLE[w.style] || ''}"` : ''}>${w.ticker}</span><span class="nm">${w.name}</span><div class="st wl-${kk}">${label}</div></div>
+      return `<div class="wl-row"><div class="id"><span class="tk"${sec ? ` data-s="${STYLE[w.style] || ''}"` : ''}>${w.ticker}</span>${thDot({th: w.theme})}<span class="nm">${w.name}</span><div class="st wl-${kk}">${label}</div></div>
         ${sec ? `<select class="wl-style" data-st="${w.ticker}" aria-label="${w.ticker} 스타일">${styleOpts(w.style)}</select>` : ''}
+        <select class="wl-theme" data-th="${w.ticker}" aria-label="${w.ticker} 테마 점">${['', '헬스', '내수'].map(o => `<option value="${o}"${o === (w.theme || '') ? ' selected' : ''}>${o || '점 없음'}</option>`).join('')}</select>
         <button class="wl-del" data-del="${w.ticker}" aria-label="${w.ticker} 삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
     }).join('') : `<div class="empty">${K.title}이(가) 없습니다. 위에서 티커를 추가하세요.</div>`) + `</div>`;
   if (tok) html += `<div class="wl-connline"><span>✓ GitHub 연결됨</span><button type="button" class="wl-link" id="wl-tokdel">연결 끊기</button></div>`;
@@ -1310,7 +1327,7 @@ function wlChanges(k) {
   const A = cfgList(k), B = WLS[k], a = new Map(A.map(w => [w.ticker, w])), b = new Map(B.map(w => [w.ticker, w]));
   let n = 0;
   a.forEach((w, t) => { if (!b.has(t)) n++; });
-  b.forEach((w, t) => { if (!a.has(t)) n++; else if (a.get(t).name !== w.name || a.get(t).style !== w.style) n++; });
+  b.forEach((w, t) => { if (!a.has(t)) n++; else if (a.get(t).name !== w.name || a.get(t).style !== w.style || (a.get(t).theme || '') !== (w.theme || '')) n++; });
   return n;
 }
 
@@ -1326,6 +1343,7 @@ function wireEdit(k) {
   };
   document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { WLS[k] = WLS[k].filter(w => w.ticker !== b.dataset.del); wlMsg = null; renderEdit(k); });
   document.querySelectorAll('.wl-style').forEach(s => s.onchange = () => { const w = WLS[k].find(x => x.ticker === s.dataset.st); if (w) { w.style = s.value; wlMsg = null; renderEdit(k); } });
+  document.querySelectorAll('.wl-theme').forEach(s => s.onchange = () => { const w = WLS[k].find(x => x.ticker === s.dataset.th); if (w) { if (s.value) w.theme = s.value; else delete w.theme; wlMsg = null; renderEdit(k); } });
   if ($('wl-undo')) $('wl-undo').onclick = () => { WLS[k] = cfgList(k); wlMsg = null; renderEdit(k); };
   if ($('wl-save')) $('wl-save').onclick = () => pushEdit(k);
   if ($('wl-toksave')) $('wl-toksave').onclick = () => connectToken($('wl-tok').value);
@@ -1340,7 +1358,7 @@ function wireEdit(k) {
 function serializeCfg(cfg) {
   const lines = Object.keys(cfg).map(key => {
     if (key !== 'watchlist' && key !== 'sectors') return `  ${JSON.stringify(key)}: ${JSON.stringify(cfg[key])}`;
-    const rows = cfg[key].map(w => `    {"ticker": ${JSON.stringify(w.ticker)}, "name": ${JSON.stringify(w.name)}${w.style ? `, "style": ${JSON.stringify(w.style)}` : ''}}`);
+    const rows = cfg[key].map(w => `    {"ticker": ${JSON.stringify(w.ticker)}, "name": ${JSON.stringify(w.name)}${w.style ? `, "style": ${JSON.stringify(w.style)}` : ''}${w.theme ? `, "theme": ${JSON.stringify(w.theme)}` : ''}}`);
     return `  ${JSON.stringify(key)}: [\n${rows.join(',\n')}\n  ]`;
   });
   return `{\n${lines.join(',\n')}\n}\n`;
