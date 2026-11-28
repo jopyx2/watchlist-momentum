@@ -445,6 +445,7 @@ tspan.thdt{font-size:7px;font-weight:400} tspan.thdt[data-d=h]{fill:#1D9E75} tsp
 .thlg .thd{margin:0 5px 0 0}
 /* 주가 차트 */
 .pxcard{background:var(--surface);border-radius:18px;padding:14px 12px 8px;margin-bottom:12px}
+.dcard .pxcard{background:transparent;border-radius:0;border-top:1px solid var(--line);padding:14px 0 6px;margin:16px 0 8px}
 .px-msg{padding:26px 8px;text-align:center;color:var(--text-3);font-size:13px}
 .px-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:0 4px}
 .px-head b{font-size:28px;letter-spacing:-.6px}
@@ -1415,14 +1416,15 @@ const PX = (() => {
 /* ---------- 상세 시트 ---------- */
 function openSheet(t, noPush) {
   const i = curItems().concat((D.sectors || {}).items || []).find(x => x.t === t); if (!i) return;
-  let html = `<div class="sheet-in"><div class="sheet-top"><button type="button" class="sheet-back" id="sheet-back" aria-label="뒤로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2 class="sheet-h"><span class="tk"${sAttr(i)}>${i.t}</span>${thDot(i)}<span class="nm" style="font-size:14px">${i.n}</span></h2></div><section class="pxcard" id="px-card"></section><div class="dcard">`;
+  let html = `<div class="sheet-in"><div class="sheet-top"><button type="button" class="sheet-back" id="sheet-back" aria-label="뒤로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2 class="sheet-h"><span class="tk"${sAttr(i)}>${i.t}</span>${thDot(i)}<span class="nm" style="font-size:14px">${i.n}</span></h2></div><div class="dcard">`;
   if (!i.h) {
-    html += `<p style="color:var(--text-2)">상장 3개월 미만이라 3개월 수익률과 궤적이 없습니다.<br>1개월 수익률 <b class="${cls(i.x1m)}">${fp(i.x1m)}</b></p>`;
+    html += `<p style="color:var(--text-2)">상장 3개월 미만이라 3개월 수익률과 궤적이 없습니다.<br>1개월 수익률 <b class="${cls(i.x1m)}">${fp(i.x1m)}</b></p><section class="pxcard" id="px-card"></section>`;
   } else {
     const hasHold = !!((D.holdings || {}).items || {})[i.t];
     html += `<div class="d-state"><span class="d-left"><span class="qchip ${i.quad}">${QN[i.quad]}</span> ${i.sig === 'up' ? '<b style="color:var(--sig)">▲ 상승 진입</b>' : i.sig === 'dn' ? '<b style="color:var(--dn)">▼ 하락 진입</b>' : ''} <span style="color:var(--text-2);font-size:13px">${stateText(i)}</span></span>${hasHold ? `<button type="button" class="hold-pill" id="sheet-hold"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="8"/><path d="M12 4v8h8"/></svg>${HOLD_LABEL}<svg class="chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>` : ''}</div>
       <div class="kv"><div><small>1개월</small><b class="${cls(i.x1)}">${fp(i.x1)}</b></div><div><small>3개월</small><b class="${cls(i.x3)}">${fp(i.x3)}</b></div><div><small>속도 변화</small><b class="${cls(i.pace)}">${fpp(i.pace)}</b></div></div>
       ${quadSVG([i], {w: 330, h: 230, focus: i.t, trails: true})}
+      <section class="pxcard" id="px-card"></section>
       <table><thead><tr><th>시점</th><th>1개월</th><th>3개월</th><th>위치</th></tr></thead><tbody>` +
       i.h.map((p, k) => `<tr><td>${SNAP[k]} <span style="color:var(--text-3)">${D.snaps[k].slice(5)}</span></td><td class="${cls(p[0])}">${fp(p[0])}</td><td class="${cls(p[1])}">${fp(p[1])}</td><td><span class="qchip ${quadOf(p[0], p[1])}">${QN[quadOf(p[0], p[1])]}</span></td></tr>`).join('') + `</tbody></table>`;
   }
