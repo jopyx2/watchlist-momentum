@@ -445,7 +445,9 @@ tspan.thdt{font-size:7px;font-weight:400} tspan.thdt[data-d=h]{fill:#1D9E75} tsp
 .thlg .thd{margin:0 5px 0 0}
 /* 주가 차트 */
 .pxcard{background:var(--surface);border-radius:18px;padding:14px 12px 8px;margin-bottom:12px}
-.dcard .pxcard{background:transparent;border-radius:0;border-top:1px solid var(--line);padding:14px 0 6px;margin:16px 0 8px}
+.dcard .pxcard{background:transparent;border-radius:0;border-top:1px solid var(--line);padding:14px 0 6px;margin:16px -16px 8px}
+.dcard .pxcard > :not(svg){padding-left:12px;padding-right:12px}
+@media (max-width:599px){ .dcard .pxcard{margin-left:-34px;margin-right:-34px} }      /* 폰: 화면 좌우 끝까지 차트를 넓힌다 */
 .px-msg{padding:26px 8px;text-align:center;color:var(--text-3);font-size:13px}
 .px-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:0 4px}
 .px-head b{font-size:28px;letter-spacing:-.6px}
@@ -1279,7 +1281,7 @@ const PX = (() => {
       <div class="px-ma" id="px-ma"></div>
       <div class="px-ind" id="px-ind"><span>보조지표</span>${INDS.map(([k, n]) => `<button type="button" data-i="${k}">${n}</button>`).join('')}</div>
       <svg class="px-svg" id="px-svg" role="img" aria-label="주가 차트"></svg>
-      <div class="px-hint">${window.matchMedia && matchMedia('(pointer: coarse)').matches ? '터치하면 십자선 · 길게 누르고 끌면 시세 따라다님 · 쓸면 이동 · 두 손가락으로 확대·축소' : '좌우로 끌면 그 구간이 확대됩니다 · 더블클릭하면 원래대로'}</div>`;
+      <div class="px-hint">${window.matchMedia && matchMedia('(pointer: coarse)').matches ? '쓸면 이동 · 길게 누르면 십자선·시세가 손가락을 따라다님 · 두 손가락으로 확대·축소' : '좌우로 끌면 그 구간이 확대됩니다 · 더블클릭하면 원래대로'}</div>`;
     const $q = id => el.querySelector('#' + id), svg = $q('px-svg');
     let view = null, selIdx = null, zoom = null;        // zoom: {a, b} = 확대한 구간의 시작·끝 봉 번호 (시리즈 전체 기준)
 
@@ -1302,7 +1304,7 @@ const PX = (() => {
       const per = PERIODS.find(p => p[0] === st.per), ser = S[per[1]], total = ser.c.length, n = zoom ? zoom.b - zoom.a + 1 : Math.min(per[2], total), i0 = zoom ? zoom.a : total - n, I = inds(ser);
       const panels = INDS.map(([k]) => k).filter(k => st.ind[k]);
       const W = Math.max(280, Math.floor(svg.getBoundingClientRect().width || svg.parentNode.clientWidth || 340));
-      const ML = 4, MR = 50, pT = 8, pB = 226, vT = 240, vB = 282, PH = 66, PG = 10, plotW = W - ML - MR, step = plotW / n, bw = Math.max(1, Math.min(24, step * 0.66));
+      const ML = 2, MR = 46, pT = 8, pB = 226, vT = 240, vB = 282, PH = 66, PG = 10, plotW = W - ML - MR, step = plotW / n, bw = Math.max(1, Math.min(24, step * 0.66));
       const bottom = vB + panels.length * (PH + PG), H = bottom + 26;
       let lo = Infinity, hi = -Infinity, vmax = 0;
       for (let i = i0; i < i0 + n; i++) {
@@ -1398,6 +1400,7 @@ const PX = (() => {
     let drag = null, lastTap = 0, pinch = null, pinched = false, raf = 0, holdT = 0;
     const touches = new Map();                                     // 터치: 지금 화면에 닿아 있는 손가락들
     const kOf = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) * (view.W / r.width); return {px, k: Math.max(0, Math.min(view.n - 1, Math.floor((px - view.ML) / view.step)))}; };
+    const clearCross = () => { selIdx = null; const c = $q('px-cx'); if (c) c.innerHTML = ''; if (view) info(null); };
     const resetZoom = () => { if (!zoom) return; zoom = null; selIdx = null; draw(); };
     function panTo(t, e) {                                         // 한 손가락으로 쓸어서 같은 폭의 구간을 과거·최근으로 옮긴다
       const r = svg.getBoundingClientRect(), stepPx = view.step * (r.width / view.W), tot = view.ser.c.length;
@@ -1426,10 +1429,10 @@ const PX = (() => {
       }
       touches.set(e.pointerId, {x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, mode: 'tap', a0: view.i0, span: view.n});   // 스마트폰: 한 손가락은 십자선, 두 손가락은 확대·축소
       try { svg.setPointerCapture(e.pointerId); } catch (err) {}
-      if (touches.size === 2) { pinched = true; clearTimeout(holdT); startPinch(); }
+      if (touches.size === 2) { pinched = true; clearTimeout(holdT); clearCross(); startPinch(); }
       else if (touches.size === 1) {
-        pinched = false; pick(e); clearTimeout(holdT);
-        const t0 = touches.get(e.pointerId); holdT = setTimeout(() => { if (t0.mode === 'tap') t0.mode = 'scrub'; }, 350);   // 길게 누르면 십자선이 손가락을 따라다닌다
+        pinched = false; clearTimeout(holdT);
+        const t0 = touches.get(e.pointerId); holdT = setTimeout(() => { if (t0.mode === 'tap') { t0.mode = 'scrub'; pick({clientX: t0.x}); } }, 350);   // 0.35초 대고 있으면 십자선·시세가 나타나 손가락을 따라다닌다
       }
     });
     svg.addEventListener('pointermove', e => {
@@ -1456,6 +1459,7 @@ const PX = (() => {
     const end = (e, cancel) => {
       if (e.pointerType !== 'mouse') {
         const t = touches.get(e.pointerId); touches.delete(e.pointerId); clearTimeout(holdT);
+        if (t && t.mode === 'scrub') clearCross();                  // 손가락을 떼면 십자선은 사라진다
         if (touches.size < 2) pinch = null;
         const was = pinched; if (!touches.size) pinched = false;
         if (cancel || !t || was || !view) return;
