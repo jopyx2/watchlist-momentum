@@ -138,19 +138,25 @@ def compute(close: pd.DataFrame, items: list[dict], asof: dt.date | None = None)
 
 
 # --------------------------------------------------------------------------- 시세
+LAST_RAW = None          # 마지막으로 받은 OHLCV 전체 (주가 차트용)
+PAGES_URL = "https://jopyx2.github.io/watchlist-momentum/"      # PC 화면이 열릴 때 최신 데이터를 받아 오는 곳
+
+
 def fetch(symbols: list[str], tries: int = 3) -> pd.DataFrame:
     import yfinance as yf
 
+    global LAST_RAW
     symbols = sorted(set(symbols))
     last_err: Exception | None = None
     for i in range(tries):
         try:
-            raw = yf.download(symbols, period="9mo", interval="1d", auto_adjust=False,
+            raw = yf.download(symbols, period="5y", interval="1d", auto_adjust=False,
                               progress=False, threads=False)
             close = raw["Close"] if isinstance(raw.columns, pd.MultiIndex) else raw[["Close"]].rename(columns={"Close": symbols[0]})
             close.index = pd.to_datetime(close.index).tz_localize(None)
             ok = [c for c in close.columns if close[c].notna().any()]
             if len(ok) >= 0.8 * len(symbols):
+                LAST_RAW = raw
                 return close.dropna(how="all")
             last_err = RuntimeError(f"시세를 받은 종목 {len(ok)}/{len(symbols)}")
         except Exception as e:  # noqa: BLE001
@@ -324,13 +330,53 @@ def build_app_data(res: dict) -> dict:
             "items": w["items"], "missing": w["missing"], "sectors": sec}
 
 
+def build_prices(raw, last_date, items: list[dict]) -> dict:
+    """주가 차트용 데이터. 종목마다 일봉(최근 260개)과 주봉(최근 260개) OHLCV. 날짜는 YYYYMMDD 정수, 가격은 소수 2자리."""
+    out: dict = {}
+    if raw is None or not isinstance(raw.columns, pd.MultiIndex):
+        return {"asof": str(last_date), "d": out}
+    raw = raw.copy()
+    raw.index = pd.to_datetime(raw.index).tz_localize(None)
+    raw = raw[raw.index <= pd.Timestamp(last_date)]
+    for it in items:
+        t, sym = it["ticker"], it["yf"]
+        if t in out:
+            continue
+        try:
+            df = pd.DataFrame({k: raw[k][sym] for k in ("Open", "High", "Low", "Close", "Volume")})
+        except KeyError:
+            continue
+        df = df.dropna(subset=["Open", "High", "Low", "Close"])
+        df["Volume"] = df["Volume"].fillna(0)
+        if len(df) < 5:
+            continue
+
+        def pack(frame: pd.DataFrame, dates) -> dict:
+            return {"t": [int(pd.Timestamp(d).strftime("%Y%m%d")) for d in dates],
+                    "o": [round(float(v), 2) for v in frame["Open"]], "h": [round(float(v), 2) for v in frame["High"]],
+                    "l": [round(float(v), 2) for v in frame["Low"]], "c": [round(float(v), 2) for v in frame["Close"]],
+                    "v": [int(v) for v in frame["Volume"]]}
+
+        daily = df.tail(260)
+        g = pd.Grouper(freq="W-FRI")
+        wk = df.groupby(g).agg(Open=("Open", "first"), High=("High", "max"), Low=("Low", "min"), Close=("Close", "last"), Volume=("Volume", "sum"))
+        wk["d"] = df.index.to_series().groupby(g).max()
+        wk = wk.dropna(subset=["Close", "d"]).tail(260)
+        out[t] = {"D": pack(daily, daily.index), "W": pack(wk, wk["d"])}
+    return {"asof": str(last_date), "d": out}
+
+
+def export_prices(prices: dict, path: Path) -> None:
+    path.write_text(json.dumps(prices, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+
 def export_app(data: dict, path: Path) -> None:
     """data.json: 스마트폰 앱이 GitHub Pages 에서 읽는 파일."""
     path.parent.mkdir(exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
 
-def render_page(data: dict, cfg: dict) -> str:
+def render_page(data: dict, cfg: dict, prices: dict | None = None) -> str:
     """PC 화면: 스마트폰 앱(index.html)과 같은 화면에 이번 계산 결과와 관심종목을 넣은 HTML 한 장.
     파일로 바로 열려야 하므로 데이터·설정을 안에 넣고, 서비스 워커는 쓰지 않는다."""
     s = (HERE / "index.html").read_text(encoding="utf-8")
@@ -341,14 +387,30 @@ def render_page(data: dict, cfg: dict) -> str:
             raise RuntimeError(f"앱 화면(index.html)에서 바꿀 자리를 찾지 못했습니다: {old[:50]}")
         s = s.replace(old, new, 1)
 
+    # 이 PC 파일에 들어 있는 값은 '만든 시점' 것이다. 열 때 GitHub Pages 에 더 새 데이터가 있으면 그것을 쓰고, 인터넷이 없으면 안의 값을 쓴다.
     sub("""    const r = await fetch('data.json?_=' + Date.now(), {cache: 'no-store'});
     if (!r.ok) throw new Error(r.status);
-    D = await r.json();""", "    D = INLINE;")
+    D = await r.json();""", """    D = INLINE;
+    try {
+      const r = await fetch(PAGES + 'data.json?_=' + Date.now(), {cache: 'no-store'});
+      if (r.ok) { const j = await r.json(); if (String(j.updated) > String(INLINE.updated)) D = j; }
+    } catch (e) {}""")
     sub("""    const r = await fetch('config.json?_=' + Date.now(), {cache: 'no-store'});
     if (!r.ok) throw new Error(r.status);
-    CFG = await r.json();""", "    CFG = JSON.parse(JSON.stringify(INLINE_CFG));")
+    CFG = await r.json();""", """    CFG = JSON.parse(JSON.stringify(INLINE_CFG));
+    try {
+      const r = await fetch(PAGES + 'config.json?_=' + Date.now(), {cache: 'no-store'});
+      if (r.ok) CFG = await r.json();
+    } catch (e) {}""")
+    sub("""    const r = await fetch('prices.json?_=' + Date.now(), {cache: 'no-store'});
+    if (!r.ok) throw new Error(r.status);
+    PRICES = await r.json();""", """    PRICES = INLINE_PRICES;
+    try {
+      const r = await fetch(PAGES + 'prices.json?_=' + Date.now(), {cache: 'no-store'});
+      if (r.ok) { const j = await r.json(); if (String(j.asof) >= String((INLINE_PRICES || {}).asof || '')) PRICES = j; }
+    } catch (e) {}""")
     sub("if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});", "")
-    sub("const QN =", "const INLINE = " + json.dumps(data, ensure_ascii=False) + ";\nconst INLINE_CFG = " + json.dumps(cfg, ensure_ascii=False) + ";\nconst QN =")
+    sub("const QN =", "const PAGES = " + json.dumps(PAGES_URL) + ";\nconst INLINE = " + json.dumps(data, ensure_ascii=False) + ";\nconst INLINE_CFG = " + json.dumps(cfg, ensure_ascii=False) + ";\nconst INLINE_PRICES = " + json.dumps(prices or {"asof": "", "d": {}}, ensure_ascii=False, separators=(",", ":")) + ";\nconst QN =")
     return s
 
 
@@ -398,6 +460,7 @@ def run(args) -> int:
     OUT.mkdir(exist_ok=True)
     page_path = OUT / f"watchlist_{res['T']:%Y-%m-%d}.html"
     data = build_app_data(res)
+    prices = build_prices(LAST_RAW, res["T"], items)
     try:
         prev = json.loads((HERE / "data.json").read_text(encoding="utf-8"))
     except Exception:  # noqa: BLE001
@@ -408,12 +471,13 @@ def run(args) -> int:
         print(f"[holdings] 건너뜀: {type(e).__name__}: {e}", file=sys.stderr)
         if prev and prev.get("holdings"):
             data["holdings"] = prev["holdings"]
-    page_path.write_text(render_page(data, cfg), encoding="utf-8")
+    page_path.write_text(render_page(data, cfg, prices), encoding="utf-8")
     latest = HERE / "관심종목_모멘텀_최신.html"
     latest.write_text(page_path.read_text(encoding="utf-8"), encoding="utf-8")
 
     if not args.asof:                   # 과거 기준일 재계산은 앱 데이터를 덮어쓰지 않는다
         export_app(data, HERE / "data.json")
+        export_prices(prices, HERE / "prices.json")
 
     if args.dump_json:
         slim = [{k: v for k, v in i.items() if k in ("kind", "ticker", "pts", "plotted", "sig", "x1", "x3", "c", "quad", "pace")} for i in res["items"]]
